@@ -20,8 +20,8 @@ p_load_expr_all_noNorm <- fs::path(processed_data_folder, "hipc_merged_all_noNor
 hipc_merged_all_noNorm <- readRDS(p_load_expr_all_noNorm)
 
 # Gene and timepoint to illustrate
-gene_name = "gbp1"
-tp = 1
+gene_name = "jchain"
+tp = 7
 
 # Timepoints of interest (numeric)
 timepoints_to_keep <- c(0,tp)
@@ -127,347 +127,415 @@ for (sdy in study_names) {
 df <- all_results %>%
   filter(sd.delta != 0)
 
-# Ensure epsilon is single
-eps_vals <- unique(df$epsilon)
-if(length(eps_vals) > 1) {
-  warning("More than one epsilon found in all_results$epsilon; using the first value.")
-}
-epsilon <- eps_vals[1]
-
-# Recover sd.delta from symmetric CI if needed
-df <- df %>%
-  mutate(
-    sd.delta = ifelse(is.na(sd.delta) & !is.na(ci.delta.upper) & !is.na(delta.estimate),
-                      (ci.delta.upper - delta.estimate) / qnorm(0.975),
-                      sd.delta),
-    sd.delta = ifelse(sd.delta == 0, NA, sd.delta) # avoid zero sd
-  )
-
-if(any(is.na(df$sd.delta))) {
-  stop("sd.delta missing for some studies and cannot be recovered from CIs. Please supply sd.delta or symmetric CIs for all studies.")
-}
-
-# compute study-level variance and weight
-df <- df %>%
-  mutate(var = sd.delta^2, weight = 1 / var)
-
-# fixed-effect pooled estimate
-W_sum <- sum(df$weight, na.rm = TRUE)
-pooled_delta <- sum(df$weight * df$delta.estimate, na.rm = TRUE) / W_sum
-var_pooled <- 1 / W_sum
-se_pooled <- sqrt(var_pooled)
-ci_pooled_lower <- pooled_delta - qnorm(0.975) * se_pooled
-ci_pooled_upper <- pooled_delta + qnorm(0.975) * se_pooled
-p_two_sided <- 2 * (1 - pnorm(abs(pooled_delta / se_pooled)))   # test vs 0 (kept for reporting)
-
-# pooled TOST p-value (match per-study TOST = max of the two one-sided p-values)
-Z1_pooled <- (pooled_delta - epsilon) / se_pooled
-Z2_pooled <- (pooled_delta + epsilon) / se_pooled
-p1_pooled <- pnorm(Z1_pooled)        # p for delta < epsilon
-p2_pooled <- 1 - pnorm(Z2_pooled)    # p for delta > -epsilon
-p_tost_pooled <- max(p1_pooled, p2_pooled)
-
-# console summary
-cat("\nPooled (FE) summary:\n")
-cat(sprintf(" pooled delta = %0.6f\n", pooled_delta))
-cat(sprintf(" SE pooled    = %0.6f\n", se_pooled))
-cat(sprintf(" 95%% CI       = [%0.6f, %0.6f]\n", ci_pooled_lower, ci_pooled_upper))
-cat(sprintf(" two-sided p  = %0.6g\n", p_two_sided))
-cat(sprintf(" pooled TOST p = %0.6g (p1=%0.6g, p2=%0.6g)  (epsilon=%0.6g)\n\n",
-            p_tost_pooled, p1_pooled, p2_pooled, epsilon))
-
-# ------ prepare per-study labels and numeric columns ------------------------
-df <- df %>%
-  mutate(
-    pct_weight = 100 * weight / W_sum,
-    label_pval = formatC(p.delta, format = "f", digits = 3),     # per-study p.delta (assumed TOST)
-    label_wgt = formatC(pct_weight, format = "f", digits = 1),
-    label_n = ifelse(is.na(n), "", as.character(n))
-  )
-
-# prepare order and y positions
-k <- nrow(df)
-df <- df %>% mutate(study_order = row_number(), y = k - study_order + 1)
-
-# Summary row (bottom). If you prefer total N, replace label_n = "" with sum(df$n, na.rm = TRUE)
-summary_row <- data.frame(
-  study_accession = "Summary (Fixed Effect)",
-  n = NA,
-  delta.estimate = pooled_delta,
-  ci.delta.lower = ci_pooled_lower,
-  ci.delta.upper = ci_pooled_upper,
-  sd.delta = se_pooled,
-  p.delta = p_tost_pooled,   # store pooled TOST p-value
-  epsilon = epsilon,
-  var = var_pooled,
-  weight = NA,
-  pct_weight = 100,
-  label_pval = formatC(p_tost_pooled, format = "f", digits = 3),
-  label_wgt = formatC(100, format = "f", digits = 1),
-  label_n = "",   # or as.character(sum(df$n, na.rm=TRUE))
-  study_order = k + 1,
-  y = 0,
-  stringsAsFactors = FALSE
-)
-
-plot_df <- bind_rows(df, summary_row) %>%
-  mutate(study_label = study_accession,
-         is_summary = study_label == "Summary (Fixed Effect)")
-
-# Random effects model fit with REML 
-
-# Ensure df has the fields: delta.estimate and var (where var = sd.delta^2)
-yi <- df$delta.estimate
-vi <- df$var
-k_used <- nrow(df)
-
-if(k_used < 2) {
-  warning("Not enough studies for random-effects REML + HK (need k >= 2). RE results set to NA.")
-  tau2_reml <- NA_real_
-  mu_re <- NA_real_; se_hk <- NA_real_; ci_re_lower <- NA_real_; ci_re_upper <- NA_real_
-  p_two_sided_re <- NA_real_; p_tost_re <- NA_real_
-} else {
-  # 1) estimate tau^2 by REML using metafor
-  re_res <- tryCatch(
-    metafor::rma.uni(yi = yi, vi = vi, method = "REML", test = "z", control=list(stepadj=0.5)),
-    error = function(e) {
-      stop("metafor::rma.uni failed to fit REML: ", conditionMessage(e))
+meta_reml_tost <- function(df = NULL,
+                           delta = NULL,
+                           sd_delta = NULL,
+                           vi = NULL,
+                           epsilon = NULL,
+                           alpha = 0.05,
+                           tol = 1e-10,
+                           verbose = FALSE) {
+  # INPUTS:
+  #  - df: optional data.frame with columns delta.estimate and sd.delta (or vi)
+  #  - delta: numeric vector of study estimates (overrides df if provided)
+  #  - sd_delta: numeric vector of standard errors (overrides df if provided)
+  #  - vi: optional vector of variances (if provided, used directly)
+  #  - epsilon: equivalence margin (required)
+  #  - alpha: significance level for CIs and TOST
+  #
+  # OUTPUT: list with elements: tau2, mu, se_HK, ci_HK, se_conv, ci_conv,
+  #         p_L, p_U, p_TOST, Q, I2, m, weights, details
+  
+  if (!is.null(df)) {
+    if (!is.null(delta) || !is.null(sd_delta) || !is.null(vi)) {
+      warning("df provided and also delta/sd_delta/vi provided. Using explicit vectors (delta/sd_delta/vi) if present.")
     }
+    # prefer explicit args when present
+    if (is.null(delta)) {
+      if (!is.null(df$delta.estimate)) delta <- df$delta.estimate
+      else stop("df provided but no column delta.estimate found and delta not supplied")
+    }
+    if (is.null(vi) && is.null(sd_delta)) {
+      if (!is.null(df$sd.delta)) sd_delta <- df$sd.delta
+      else if (!is.null(df$vi)) vi <- df$vi
+      else stop("df provided but no sd.delta or vi column found and sd_delta/vi not supplied")
+    }
+  }
+  
+  if (is.null(delta)) stop("delta (trial-level estimates) must be supplied (either via df or delta argument)")
+  delta <- as.numeric(delta)
+  m <- length(delta)
+  
+  if (!is.null(vi)) {
+    vi <- as.numeric(vi)
+  } else {
+    if (is.null(sd_delta)) stop("Either sd_delta or vi must be supplied (or df with sd.delta)")
+    sd_delta <- as.numeric(sd_delta)
+    vi <- sd_delta^2
+  }
+  
+  if (length(vi) != m) stop("length(vi) must equal length(delta)")
+  if (any(is.na(delta)) || any(is.na(vi))) stop("NA values in delta or vi are not allowed")
+  if (is.null(epsilon)) stop("epsilon (equivalence margin) must be supplied")
+  
+  # -------------------------
+  # REML estimation of tau^2
+  # -------------------------
+  # weighted mean function for a given tau2
+  mu_of <- function(tau2) {
+    w <- 1 / (vi + tau2)
+    sum(w * delta) / sum(w)
+  }
+  
+  # restricted score function: root gives REML tau^2
+  score_fn <- function(tau2) {
+    v <- vi + tau2
+    w <- 1 / v
+    mu <- sum(w * delta) / sum(w)
+    sum((delta - mu)^2 / (v^2)) - sum(1 / v)
+  }
+  
+  # negative restricted log-likelihood (minimize this if no root found)
+  neg_restricted_loglik <- function(tau2) {
+    v <- vi + tau2
+    wsum <- sum(1 / v)
+    mu  <- sum((1 / v) * delta) / wsum
+    0.5 * ( sum(log(v)) + log(wsum) + sum((delta - mu)^2 / v) )
+  }
+  
+  # choose an upper bound for tau2 search
+  s2 <- if (m > 1) var(delta) else 0
+  upper <- max(abs(s2 - mean(vi)), s2, max(vi), 1e-6)
+  upper <- abs(upper) * 10 + 1e-6
+  if (upper <= 0) upper <- 1e-6
+  
+  # try uniroot on [0, upper] if a sign change exists
+  tau2_hat <- NA
+  method_used <- NA
+  converged <- FALSE
+  details <- list()
+  
+  s0 <- score_fn(0)
+  su <- score_fn(upper)
+  if (verbose) cat(sprintf("REML score at endpoints: score(0)=%.6g, score(upper=%.6g)=%.6g\n", s0, upper, su))
+  
+  if (is.finite(s0) && is.finite(su) && s0 * su < 0) {
+    ur <- tryCatch(
+      uniroot(score_fn, lower = 0, upper = upper, tol = tol),
+      error = function(e) e
+    )
+    if (!inherits(ur, "error")) {
+      tau2_hat <- max(0, ur$root)
+      method_used <- "score_uniroot"
+      converged <- TRUE
+      details$uniroot <- ur
+    } else {
+      if (verbose) message("uniroot failed; falling back to optimize on restricted log-likelihood")
+    }
+  }
+  
+  if (!converged) {
+    opt <- optimize(neg_restricted_loglik, lower = 0, upper = upper, tol = tol)
+    tau2_hat <- max(0, opt$minimum)
+    method_used <- "optimize_neg_restricted_loglik"
+    converged <- TRUE
+    details$optimize <- opt
+  }
+  
+  # -------------------------
+  # pooled estimates & HK SE
+  # -------------------------
+  w_tau <- 1 / (vi + tau2_hat)
+  mu_hat <- sum(w_tau * delta) / sum(w_tau)
+  var_conv <- 1 / sum(w_tau)
+  se_conv <- sqrt(var_conv)
+  
+  # Hartung-Knapp scaling factor q (as in your formula)
+  if (m > 1) {
+    q <- (1 / (m - 1)) * sum(w_tau * (delta - mu_hat)^2)
+    # ensure q non-negative (numerical)
+    q <- max(0, q)
+    se_HK <- sqrt(q) * sqrt(var_conv)
+  } else {
+    q <- NA
+    se_HK <- NA
+  }
+  
+  # HK CI (uses t_{m-1})
+  if (m > 1) {
+    tcrit <- qt(1 - alpha / 2, df = m - 1)
+    ci_HK <- c(mu_hat - tcrit * se_HK, mu_hat + tcrit * se_HK)
+  } else {
+    ci_HK <- c(NA, NA)
+  }
+  
+  # Conventional normal-approx CI (for reference)
+  zcrit <- qnorm(1 - alpha / 2)
+  ci_conv <- c(mu_hat - zcrit * se_conv, mu_hat + zcrit * se_conv)
+  
+  # -------------------------
+  # Two-one-sided test (TOST) using HK SE
+  # -------------------------
+  if (m > 1) {
+    T_L <- (mu_hat + epsilon) / se_HK
+    T_U <- (mu_hat - epsilon) / se_HK
+    p_L <- 1 - pt(T_L, df = m - 1)   # p-value for H0L: mu <= -epsilon
+    p_U <- pt(T_U, df = m - 1)       # p-value for H0U: mu >= +epsilon
+    p_TOST <- max(p_L, p_U)
+  } else {
+    T_L <- T_U <- p_L <- p_U <- p_TOST <- NA
+  }
+  
+  # -------------------------
+  # Cochran's Q and I^2
+  # -------------------------
+  # Fixed-effect weights use vi only
+  w0 <- 1 / vi
+  w0_sum <- sum(w0)
+  delta_FE <- sum(w0 * delta) / w0_sum
+  Q <- sum(w0 * (delta - delta_FE)^2)
+  # handle degenerate Q
+  if (m > 1 && is.finite(Q) && Q > (m - 1)) {
+    I2 <- max(0, (Q - (m - 1)) / Q) * 100
+  } else {
+    I2 <- max(0, (Q - (m - 1)) / max(Q, 1e-12)) * 100
+    I2 <- max(0, I2)
+  }
+  
+  # -------------------------
+  # prepare output
+  # -------------------------
+  results <- list(
+    m = m,
+    tau2 = tau2_hat,
+    mu = mu_hat,
+    var_conv = var_conv,
+    se_conv = se_conv,
+    ci_conv = ci_conv,
+    se_HK = se_HK,
+    ci_HK = ci_HK,
+    q_HK = q,
+    T_L = T_L,
+    T_U = T_U,
+    p_L = p_L,
+    p_U = p_U,
+    p_TOST = p_TOST,
+    Q = Q,
+    I2 = I2,
+    weights_tau = w_tau,
+    weights_fe = w0,
+    delta_FE = delta_FE,
+    method = method_used,
+    converged = converged,
+    details = details
   )
-  tau2_reml <- as.numeric(re_res$tau2)   # estimated between-study variance
   
-  # 2) random-effects weights
-  w_re <- 1 / (vi + tau2_reml)
+  # small summary table per-study (optional)
+  study_tbl <- data.frame(
+    delta = delta,
+    vi = vi,
+    w_tau = w_tau,
+    stringsAsFactors = FALSE
+  )
   
-  # 3) pooled random-effects estimate (inverse-variance)
-  sum_w_re <- sum(w_re, na.rm = TRUE)
-  mu_re <- sum(w_re * yi, na.rm = TRUE) / sum_w_re
-  
-  # 4) Knapp-Hartung variance for mu_re
-  Q_star <- sum(w_re * (yi - mu_re)^2, na.rm = TRUE)
-  var_hk <- NA_real_
-  se_hk <- NA_real_
-  
-  # If variance degenerate (sum_w_re == 0) set NA
-  if(sum_w_re <= 0 || is.na(Q_star) || (k_used - 1) <= 0) {
-    var_hk <- NA_real_
-    se_hk <- NA_real_
-  } else {
-    var_hk <- Q_star / ((k_used - 1) * (sum_w_re^2))
-    # numeric safety: var_hk must be non-negative
-    if(var_hk < 0) var_hk <- 0
-    se_hk <- sqrt(var_hk)
-  }
-  
-  # 5) HK t-based CI and two-sided p-value
-  df_hk <- k_used - 1
-  if(!is.na(se_hk) && se_hk > 0 && df_hk >= 1) {
-    t_crit <- qt(0.975, df = df_hk)
-    ci_re_lower <- mu_re - t_crit * se_hk
-    ci_re_upper <- mu_re + t_crit * se_hk
-    
-    T_stat <- mu_re / se_hk
-    p_two_sided_re <- 2 * (1 - pt(abs(T_stat), df = df_hk))
-  } else {
-    ci_re_lower <- NA_real_; ci_re_upper <- NA_real_; p_two_sided_re <- NA_real_
-  }
-  
-  # 6) pooled TOST p-values under HK (t-distribution)
-  # T1 = (mu_re - epsilon) / se_hk   -> p1 = pt(T1, df=k-1)
-  # T2 = (mu_re + epsilon) / se_hk   -> p2 = 1 - pt(T2, df=k-1)
-  if(!is.na(se_hk) && se_hk > 0 && df_hk >= 1) {
-    T1_re <- (mu_re - epsilon) / se_hk
-    T2_re <- (mu_re + epsilon) / se_hk
-    p1_re <- pt(T1_re, df = df_hk)           # lower-tail
-    p2_re <- 1 - pt(T2_re, df = df_hk)       # upper-tail
-    p_tost_re <- max(p1_re, p2_re)
-  } else {
-    p1_re <- p2_re <- p_tost_re <- NA_real_
-  }
-  
-  # console output
-  cat("\nRandom-effects (REML) + Knapp-Hartung (HK) summary:\n")
-  cat(sprintf(" estimated tau^2 (REML) = %0.6g\n", tau2_reml))
-  cat(sprintf(" pooled mu_RE           = %0.6f\n", mu_re))
-  cat(sprintf(" HK SE                  = %0.6f\n", se_hk))
-  cat(sprintf(" 95%% HK CI              = [%0.6f, %0.6f]\n", ci_re_lower, ci_re_upper))
-  cat(sprintf(" two-sided p (HK t)     = %0.6g\n", p_two_sided_re))
-  cat(sprintf(" pooled TOST p (HK)     = %0.6g   (p1=%0.6g, p2=%0.6g)   (epsilon=%0.6g)\n\n",
-              p_tost_re, p1_re, p2_re, epsilon))
+  return(list(results = results, per_study = study_tbl))
 }
 
-# ---------------- Create RE summary row and RE plotting data ----------------
-# Create summary_row_re placed at y = 0 (same vertical convention as FE summary)
-summary_row_re <- data.frame(
-  study_accession = "Summary (Random Effects)",
-  n = NA,
-  delta.estimate = mu_re,
-  ci.delta.lower = ci_re_lower,
-  ci.delta.upper = ci_re_upper,
-  sd.delta = se_hk,
-  p.delta = p_tost_re,    # pooled TOST p under HK
-  epsilon = epsilon,
-  var = var_hk,
-  weight = NA,
-  pct_weight = NA,
-  label_pval = ifelse(is.na(p_tost_re), "", formatC(p_tost_re, format = "f", digits = 3)),
-  label_wgt = "",
-  label_n = "",
-  study_order = k + 1,
-  y = 0,
-  stringsAsFactors = FALSE
+out <- meta_reml_tost(df = df, epsilon = epsilon, alpha = 0.05, verbose = TRUE)
+
+# ------------------ Validate inputs ------------------------------------------------
+if (!exists("df")) stop("data.frame `df` not found. Provide df with study-level data.")
+if (!exists("out")) stop("meta results `out` not found. Run meta_reml_tost(...) first.")
+if (is.null(epsilon)) stop("equivalence margin `epsilon` is not defined in the environment.")
+
+# ------------------ Prepare per-study data ----------------------------------------
+# Ensure numeric columns present
+df <- df %>% mutate(delta = as.numeric(delta.estimate))
+
+# derive se and vi
+if (!is.null(df$vi)) {
+  df <- df %>% mutate(vi = as.numeric(vi),
+                      sd = sqrt(vi))
+} else if (!is.null(df$sd.delta)) {
+  df <- df %>% mutate(sd = as.numeric(sd.delta),
+                      vi = (sd)^2)
+} else {
+  stop("df must contain either 'vi' or 'sd.delta' (standard error) for each study.")
+}
+
+# per-study CI fallback if missing: normal approx 95% CI
+if (is.null(df$ci.delta.lower) || any(is.na(df$ci.delta.lower))) {
+  df <- df %>%
+    mutate(ci.delta.lower = ifelse(is.na(ci.delta.lower),
+                                   delta - qnorm(0.975) * sd,
+                                   ci.delta.lower),
+           ci.delta.upper = ifelse(is.na(ci.delta.upper),
+                                   delta + qnorm(0.975) * sd,
+                                   ci.delta.upper))
+}
+
+# per-study p-value: prefer provided p.delta, otherwise compute per-study TOST p (normal approx if n missing)
+df <- df %>%
+  mutate(
+    p_L_study = (delta + epsilon) / sd,                    # T_L statistic (z or t)
+    p_U_study = (delta - epsilon) / sd,
+    pL = ifelse(!is.null(p.delta) & !is.na(p.delta), NA_real_, 1 - pnorm(p_L_study)),
+    pU = ifelse(!is.null(p.delta) & !is.na(p.delta), NA_real_, pnorm(p_U_study)),
+    p_TOST_study = ifelse(!is.null(p.delta) & !is.na(p.delta), p.delta, pmax(pL, pU)),
+    label_pval = ifelse(is.na(p_TOST_study), "", formatC(p_TOST_study, format = "f", digits = 3)),
+    label_n = ifelse(!is.null(n) & !is.na(n), as.character(n), "")
+  )
+
+# assign vertical positions: studies from top (k) down to 1; summary will be at y = 0
+k <- nrow(df)
+df <- df %>% mutate(y = seq(from = k, to = 1))
+
+# ------------------ Extract RE summary from out -----------------------------------
+res <- out$results
+# res <- rma.uni(yi = df$delta, vi = df$vi, method = "REML", test = "knha")
+
+mu_re       <- res$mu
+ci_re_lower <- res$ci_HK[1]
+ci_re_upper <- res$ci_HK[2]
+se_hk       <- res$se_HK
+var_hk      <- if (!is.na(se_hk)) se_hk^2 else NA_real_
+p_tost_re   <- res$p_TOST
+tau2_reml   <- res$tau2
+I2_pct      <- res$I2
+k_used      <- res$m
+
+# ------------------ Random-effects weights & percent weights ----------------------
+# compute RE weights using estimated tau2
+w_re <- 1 / (df$vi + tau2_reml)
+pct_w <- 100 * w_re / sum(w_re, na.rm = TRUE)
+
+df <- df %>%
+  mutate(weight_RE = w_re,
+         pct_weight = pct_w,
+         label_wgt = ifelse(!is.na(pct_weight), formatC(pct_weight, format = "f", digits = 1), "")
+  )
+
+# ------------------ Prepare summary (RE) row -------------------------------------
+summary_row_re <- tibble::tibble(
+  study_accession = "Summary",
+  delta.estimate  = mu_re,
+  ci.delta.lower  = ci_re_lower,
+  ci.delta.upper  = ci_re_upper,
+  sd.delta        = se_hk,
+  p.delta         = p_tost_re,
+  epsilon         = epsilon,
+  var             = var_hk,
+  weight          = NA_real_,
+  pct_weight      = NA_real_,
+  label_pval      = ifelse(is.na(p_tost_re), "", formatC(p_tost_re, format = "f", digits = 3)),
+  label_wgt       = "",
+  label_n         = "",
+  y = 0
 )
 
-# plot_df contains the FE summary + studies; create plot_df_re for RE plot
-plot_df_re <- bind_rows(df, summary_row_re) %>%
-  mutate(study_label = study_accession,
-         is_summary = study_label == "Summary (Random Effects)")
+# Combine the study data with the summary row without renaming
+plot_df_re <- bind_rows(
+  df,             # df already has delta.estimate, ci.delta.lower, ci.delta.upper
+  summary_row_re  # summary row
+) %>%
+  mutate(
+    study_label = study_accession,
+    is_summary  = (study_label == "Summary")
+  )
 
-# ----- plotting parameters --------------------------------------------------
-base_text_size <- 14
-# vertical extents: allow space below y=0 for epsilon labels
+# ------------------ Plot layout parameters --------------------------------------
+base_text_size <- 16   # large, readable text
 y_min <- -1
 y_max <- k + 1
-
-# left/middle/right relative widths (tune as needed)
 rel_w_left  <- 0.45
-rel_w_mid   <- 0.95
-rel_w_right <- 0.50
+rel_w_mid   <- 1.10
+rel_w_right <- 0.55
 
-# ----------------- Left panel: study labels (FE) ----------------------------
-left_labels_fe <- ggplot(plot_df , aes(y = y)) +
-  geom_text(aes(x = 0, label = study_label), hjust = 0, size = 4.2) +
-  # fix a narrow x-range so text cannot overflow into the middle panel
+# x axis range
+x_min <- -1
+x_max <- 1
+
+# ------------------ Left panel: study labels -------------------------------------
+left_labels_re <- ggplot(plot_df_re, aes(y = y)) +
+  geom_text(aes(x = 0, label = study_label,
+                fontface = ifelse(is_summary, "bold", "plain")), 
+            hjust = 0, size = 5) +
   scale_x_continuous(limits = c(-0.1, 0.95), expand = c(0, 0)) +
-  scale_y_continuous(breaks = plot_df$y, limits = c(y_min, y_max), expand = c(0, 0)) +
+  scale_y_continuous(breaks = plot_df_re$y, limits = c(y_min, y_max), expand = c(0, 0)) +
   coord_cartesian(clip = "off") +
   theme_void() +
   theme(
     panel.background = element_rect(fill = "white", colour = NA),
-    plot.margin = unit(c(1.2, 0.6, 1, 1.2), "lines")  # extra right padding
+    plot.margin = unit(c(1.2, 0.6, 1, 1.2), "lines"),
+    plot.title = element_text(hjust = 0.5, size = base_text_size + 4, face = "bold")
   )
 
-# ----------------- Middle panel: forest plot (FE) --------------------------
-forest_mid_fe <- ggplot(plot_df , aes(x = delta.estimate, y = y)) +
-  geom_errorbarh(aes(xmin = ci.delta.lower, xmax = ci.delta.upper), height = 0.15, size = 0.6) +
-  geom_point(data = filter(plot_df , !is_summary), shape = 16, size = 3) +
-  geom_point(data = filter(plot_df , is_summary), shape = 18, size = 5) +
-  scale_y_continuous(breaks = plot_df$y, limits = c(y_min, y_max), expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-1.05, 1.05), ylim = c(y_min, y_max), expand = FALSE, clip = "off") +
-  labs(x = expression(delta), y = NULL, title = paste0("Influenza (IN): Fixed-effect meta-analysis of ", gene_name, " at Day ", tp)) +
+# ------------------ Middle panel: forest plot -----------------------------------
+forest_mid_re <- ggplot(plot_df_re, aes(x = delta.estimate, y = y)) +
+  # CIs
+  geom_errorbarh(aes(xmin = ci.delta.lower, xmax = ci.delta.upper), height = 0.15, size = 0.8) +
+  # study points
+  geom_point(data = filter(plot_df_re, !is_summary), shape = 16, size = 3.5) +
+  # summary point (distinct)
+  geom_point(data = filter(plot_df_re, is_summary), shape = 5, size = 8) +
+  # axis and limits
+  scale_x_continuous(limits = c(x_min, x_max), expand = c(0, 0), breaks = seq(x_min, x_max, by = 0.5)) +
+  scale_y_continuous(breaks = plot_df_re$y, limits = c(y_min, y_max), expand = c(0, 0)) +
+  coord_cartesian(ylim = c(y_min, y_max), xlim = c(x_min, x_max), clip = "off") +
+  labs(x = expression(delta), y = NULL,
+       title = paste0("Random-effects meta-analysis of ", ifelse(exists("gene_name"), gene_name, ""), 
+                      ifelse(exists("tp"), paste0(" at Day ", tp), ""))) +
   theme_minimal(base_size = base_text_size) +
   theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = base_text_size + 4),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = base_text_size + 6),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
-    axis.title.x = element_text(size = base_text_size + 10),
-    axis.text.x = element_text(size = base_text_size - 1),
-    # add left margin so left panel never intrudes
-    plot.margin = unit(c(1.2, 0.6, 1, 1.0), "lines")
+    axis.title.x = element_text(size = base_text_size + 4),
+    axis.text.x = element_text(size = base_text_size),
+    plot.margin = unit(c(1.2, 0.6, 1, 0.6), "lines")
   ) +
-  geom_vline(xintercept = c(-epsilon, epsilon), linetype = "dashed", color = "red", size = 0.6) +
-  geom_vline(xintercept = 0, linetype = "solid", color = "grey80") 
+  # non-inferiority margins and center line
+  geom_vline(xintercept = c(-epsilon, epsilon), linetype = "dashed", color = "red", size = 0.7) +
+  geom_vline(xintercept = 0, linetype = "solid", color = "grey60")
 
-# ----------------- Right panel: p-value / weight / N (FE) ------------------
-right_table_fe <- ggplot(plot_df , aes(y = y)) +
+# ------------------ Right panel: p-value / weight / N ---------------------------
+# prepare a display dataframe for the right panel aligned by y
+right_df <- plot_df_re %>%
+  mutate(
+    display_pval = ifelse(is_summary, label_pval, ifelse(!is.na(label_pval) & label_pval != "", label_pval, "")),
+    display_wgt = ifelse(is_summary, "", ifelse(!is.na(label_wgt) & label_wgt != "", paste0(label_wgt, "%"), "")),
+    display_n   = ifelse(is_summary, "", label_n)
+  )
+
+right_table_re <- ggplot(right_df, aes(y = y)) +
   # column headers
-  annotate("text", x = 1, y = k + 0.9, label = "p-value", fontface = "bold", hjust = 0, size = 4.5) +
-  annotate("text", x = 2, y = k + 0.9, label = "Weight", fontface = "bold", hjust = 0, size = 4.5) +
-  annotate("text", x = 3, y = k + 0.9, label = "N", fontface = "bold", hjust = 0, size = 4.5) +
-  geom_text(aes(x = 1, label = label_pval), hjust = 0, size = 4) +
-  geom_text(aes(x = 2, label = paste0(label_wgt, "%")), hjust = 0, size = 4) +
-  geom_text(aes(x = 3, label = label_n), hjust = 0, size = 4) +
-  scale_y_continuous(breaks = plot_df$y, limits = c(y_min, y_max), expand = c(0, 0)) +
-  scale_x_continuous(limits = c(0.8, 3.6), expand = c(0, 0)) +
+  annotate("text", x = 1, y = k + 0.9, label = "p-value", fontface = "bold", hjust = 0, size = 5) +
+  annotate("text", x = 2.1, y = k + 0.9, label = "Weight", fontface = "bold", hjust = 0, size = 5) +
+  annotate("text", x = 3.3, y = k + 0.9, label = "N", fontface = "bold", hjust = 0, size = 5) +
+  geom_text(aes(x = 1, label = display_pval), hjust = 0, size = 4.5) +
+  geom_text(aes(x = 2.1, label = display_wgt), hjust = 0, size = 4.5) +
+  geom_text(aes(x = 3.3, label = display_n), hjust = 0, size = 4.5) +
+  scale_y_continuous(breaks = right_df$y, limits = c(y_min, y_max), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(0.9, 4.0), expand = c(0, 0)) +
   coord_cartesian(clip = "off") +
   theme_void() +
   theme(plot.margin = unit(c(1.2, 1.2, 1, 0.6), "lines"))
 
-# ----------------- Left panel: study labels (RE) ----------------------------
-left_labels_re <- ggplot(plot_df_re , aes(y = y)) +
-  geom_text(aes(x = 0, label = study_label), hjust = 0, size = 4.2) +
-  scale_x_continuous(limits = c(-0.1, 0.95), expand = c(0, 0)) +
-  scale_y_continuous(breaks = plot_df_re$y, limits = c(y_min, y_max), expand = c(0, 0)) +
-  coord_cartesian(clip = "off") +
-  theme_void() +
-  theme(
-    panel.background = element_rect(fill = "white", colour = NA),
-    plot.margin = unit(c(1.2, 0.6, 1, 1.2), "lines")
-  )
-
-# ----------------- Middle panel: forest plot (RE) --------------------------
-forest_mid_re <- ggplot(plot_df_re , aes(x = delta.estimate, y = y)) +
-  geom_errorbarh(aes(xmin = ci.delta.lower, xmax = ci.delta.upper), height = 0.15, size = 0.6) +
-  geom_point(data = filter(plot_df_re , !is_summary), shape = 16, size = 3) +
-  geom_point(data = filter(plot_df_re , is_summary), shape = 18, size = 5) +
-  scale_y_continuous(breaks = plot_df_re$y, limits = c(y_min, y_max), expand = c(0, 0)) +
-  coord_cartesian(xlim = c(-1.05, 1.05), ylim = c(y_min, y_max), expand = FALSE, clip = "off") +
-  labs(x = expression(delta), y = NULL, title = paste0("Influenza (IN): Random-effects meta-analysis of ", gene_name, " at Day ", tp)) +
-  theme_minimal(base_size = base_text_size) +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = base_text_size + 4),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    axis.title.x = element_text(size = base_text_size + 10),
-    axis.text.x = element_text(size = base_text_size - 1),
-    plot.margin = unit(c(1.2, 0.6, 1, 1.0), "lines")
-  ) +
-  geom_vline(xintercept = c(-epsilon, epsilon), linetype = "dashed", color = "red", size = 0.6) +
-  geom_vline(xintercept = 0, linetype = "solid", color = "grey80") 
-
-# ----------------- Right panel: p-value / weight / N (RE) ------------------
-# For the RE plot, per-study label_pval and label_wgt come from df;
-# summary row will show the pooled RE p-value where available.
-right_table_re <- ggplot(plot_df_re , aes(y = y)) +
-  annotate("text", x = 1, y = k + 0.9, label = "p-value", fontface = "bold", hjust = 0, size = 4.5) +
-  annotate("text", x = 2, y = k + 0.9, label = "Weight", fontface = "bold", hjust = 0, size = 4.5) +
-  annotate("text", x = 3, y = k + 0.9, label = "N", fontface = "bold", hjust = 0, size = 4.5) +
-  geom_text(aes(x = 1, label = label_pval), hjust = 0, size = 4) +
-  geom_text(aes(x = 2, label = paste0(label_wgt, "%")), hjust = 0, size = 4) +
-  geom_text(aes(x = 3, label = label_n), hjust = 0, size = 4) +
-  scale_y_continuous(breaks = plot_df_re$y, limits = c(y_min, y_max), expand = c(0, 0)) +
-  scale_x_continuous(limits = c(0.8, 3.6), expand = c(0, 0)) +
-  coord_cartesian(clip = "off") +
-  theme_void() +
-  theme(plot.margin = unit(c(1.2, 1.2, 1, 0.6), "lines"))
-
-# ----------------- Combine panels and show plots ---------------------------
-combined_fe <- plot_grid(left_labels_fe, forest_mid_fe, right_table_fe, nrow = 1,
-                         rel_widths = c(rel_w_left, rel_w_mid, rel_w_right), align = "h")
-
+# ------------------ Combine panels ------------------------------------------------
 combined_re <- plot_grid(left_labels_re, forest_mid_re, right_table_re, nrow = 1,
                          rel_widths = c(rel_w_left, rel_w_mid, rel_w_right), align = "h")
 
-# show on screen: Fixed-effect plot first
-print(combined_fe)
-
-# --- compute Cochran's Q and I^2 for RE display (use pooled_delta as FE estimate)
-Q_cochran <- NA_real_
-I2_pct <- NA_real_
-if (exists("pooled_delta") && !any(is.na(vi)) && length(vi) == length(yi) && length(yi) > 1) {
-  w_fe <- 1 / vi
-  Q_cochran <- sum(w_fe * (yi - pooled_delta)^2, na.rm = TRUE)
-  if (!is.na(Q_cochran) && Q_cochran > 0 && k_used > 1) {
-    I2 <- max(0, (Q_cochran - (k_used - 1)) / Q_cochran)
-    I2_pct <- 100 * I2
-  } else {
-    I2_pct <- 0
-  }
-}
-
-# format strings for display
-tau2_txt <- ifelse(is.na(tau2_reml), "NA", formatC(tau2_reml, digits = 3, format = "f"))
+# ------------------ Bottom info row (tau^2 and I^2) --------------------------------
+tau2_txt <- ifelse(is.na(tau2_reml), "NA", formatC(tau2_reml, digits = 4, format = "f"))
 I2_txt   <- ifelse(is.na(I2_pct), "NA", formatC(I2_pct, digits = 1, format = "f"))
-k_txt    <- ifelse(is.null(k_used), "NA", as.character(k_used))
+k_txt    <- as.character(k_used)
 
-info_text <- paste0("RE (REML): τ² = ", tau2_txt, "   |   I² = ", I2_txt, "%   |   k = ", k_txt)
+info_text <- paste0("RE (REML):  τ² = ", tau2_txt, "   |   I² = ", I2_txt)
 
-# Bottom info row (tau^2 and I^2)
-info_grob <- ggdraw() + 
-  draw_label(info_text, x = 0.5, y = 0.5, hjust = 0.5, size = base_text_size)
+info_grob <- ggdraw() +
+  draw_label(info_text, x = 0.5, y = 0.5, hjust = 0.5, size = base_text_size + 2)
 
-# Final combined RE plot with a small bottom row for statistics
 final_re_plot <- plot_grid(combined_re, info_grob, ncol = 1, rel_heights = c(0.95, 0.05))
 
-# display RE plot
+# ------------------ Print the final plot ---------------------------------------
 print(final_re_plot)
