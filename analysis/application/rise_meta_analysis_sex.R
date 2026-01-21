@@ -17,10 +17,10 @@ hipc_merged_all_noNorm <- readRDS(p_load_expr_all_noNorm)
 
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where( ~ !any(is.na(.)))) %>%
+  select(where(~ !any(is.na(.)))) %>%
   colnames()
 
-tp <- 7
+tp <- 1
 timepoints_to_keep <- c(0, tp)
 
 hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
@@ -35,6 +35,7 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
   ungroup() %>%
   select(
     participant_id,
+    gender,
     study_accession,
     study_time_collected,
     immResp_MFC_anyAssay_pre_value,
@@ -43,27 +44,30 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
   ) %>%
   arrange(participant_id)
 
-yone = hipc_merged_all_noNorm_filtered %>%
+df_train = hipc_merged_all_noNorm_filtered %>%
+  filter(gender == "Male")
+
+yone = df_train %>%
   filter(study_time_collected > 0) %>%
   pull(immResp_MFC_anyAssay_post_value)
 
-yzero = hipc_merged_all_noNorm_filtered %>%
+yzero = df_train %>%
   filter(study_time_collected == 0) %>%
   pull(immResp_MFC_anyAssay_pre_value)
 
-sone = hipc_merged_all_noNorm_filtered %>%
+sone = df_train %>%
   filter(study_time_collected > 0) %>%
   select(all_of(gene_names))
 
-szero = hipc_merged_all_noNorm_filtered %>%
+szero = df_train %>%
   filter(study_time_collected == 0) %>%
   select(all_of(gene_names))
 
-studyone = hipc_merged_all_noNorm_filtered %>%
+studyone = df_train %>%
   filter(study_time_collected > 0) %>%
   pull(study_accession)
 
-studyzero = hipc_merged_all_noNorm_filtered %>%
+studyzero = df_train %>%
   filter(study_time_collected == 0) %>%
   pull(study_accession)
 
@@ -90,6 +94,33 @@ markers = rise.screen.meta.result[["significant.markers"]]
 
 screening.weights = rise.screen.meta.result[["screening.weights"]]
 
+df_test = hipc_merged_all_noNorm_filtered %>%
+  filter(gender == "Female")
+
+yone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  pull(immResp_MFC_anyAssay_post_value)
+
+yzero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  pull(immResp_MFC_anyAssay_pre_value)
+
+sone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  select(all_of(gene_names))
+
+szero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  select(all_of(gene_names))
+
+studyone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  pull(study_accession)
+
+studyzero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  pull(study_accession)
+
 rise.evaluate.meta.result = rise.evaluate.meta(
   yone,
   yzero,
@@ -97,7 +128,7 @@ rise.evaluate.meta.result = rise.evaluate.meta(
   szero,
   studyone,
   studyzero,
-  alpha = 0.05,
+  alpha = 0.1,
   epsilon.meta = 0.2,
   alternative = "two.sided",
   paired.all = T,
