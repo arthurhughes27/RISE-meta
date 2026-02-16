@@ -29,7 +29,7 @@ BTM_filtered = BTM[["genesets"]][BTM_interferon] %>%
 
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where( ~ !any(is.na(.)))) %>%
+  select(where(~ !any(is.na(.)))) %>%
   colnames()
 
 tp <- 1
@@ -38,12 +38,12 @@ timepoints_to_keep <- c(0, tp)
 hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
   mutate(
     response_pre = ifelse(
-      study_accession %in% c("SDY80", "SDY180", "SDY1276"),
+      study_accession %in% c("SDY80", "SDY180", "SDY1276", "SDY67"),
       immResp_mean_nAb_pre_value,
       immResp_mean_hai_pre_value
     ),
     response_post = ifelse(
-      study_accession %in% c("SDY80", "SDY180", "SDY1276"),
+      study_accession %in% c("SDY80", "SDY180", "SDY1276", "SDY67"),
       immResp_mean_nAb_post_value,
       immResp_mean_hai_post_value
     )
@@ -51,8 +51,7 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
   filter(
     !is.na(immResp_MFC_anyAssay_log2_MFC),
     vaccine_name == "Influenza (IN)",
-    study_time_collected %in% timepoints_to_keep,
-    # !(study_accession %in% c("SDY61", "SDY224"))
+    study_time_collected %in% timepoints_to_keep
   ) %>%
   group_by(participant_id) %>%
   filter(sum(study_time_collected == 0) == 1,
@@ -629,6 +628,19 @@ ggsave(
   units = "cm"
 )
 
+p13 = rise.screen.meta.result[["gamma.s.plot"]]$fit.plot
+
+p13
+
+ggsave(
+  filename = "rise_influenzain_222_crossstudy_meta_fitplot.pdf",
+  path = application_figures_folder,
+  plot = p13,
+  width = 37,
+  height = 20,
+  units = "cm"
+)
+
 # Analysis eight: pre-selecting BTM interferon/antiviral genes
 
 hipc_merged_all_noNorm_filtered_copy = hipc_merged_all_noNorm_filtered
@@ -970,5 +982,18 @@ ggsave(
   plot = p11,
   width = 27,
   height = 17,
+  units = "cm"
+)
+
+p12 = rise.screen.meta.result[["gamma.s.plot"]]$fit.plot
+
+p12
+
+ggsave(
+  filename = "rise_influenzain_BTMmean_crossstudy_meta_fitplot.pdf",
+  path = application_figures_folder,
+  plot = p12,
+  width = 37,
+  height = 20,
   units = "cm"
 )
