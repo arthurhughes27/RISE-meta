@@ -33,16 +33,12 @@ response_hai = read_excel(p_load_hai) %>%
 response_nAb = read_excel(p_load_nAb) %>%
   clean_names()
 
-# ELISA response data
-response_elisa = read_excel(p_load_elisa) %>%
-  clean_names()
-
 # Clinical data for filtration of participants
-hipc_clinical = readRDS(p_load_clinical)
+hipc_clinical_all_noNorm = readRDS(p_load_clinical)
 
 # First, filter each dataframe to only contain information on participants for which we have gene expression data
 # Find identifiers of participants with gene expression measurements
-participants = hipc_clinical %>%
+participants = hipc_clinical_all_noNorm %>%
   pull(participant_id) %>%
   unique()
 
@@ -51,9 +47,6 @@ response_hai = response_hai %>%
   filter(participant_id %in% participants)
 
 response_nAb = response_nAb %>%
-  filter(participant_id %in% participants)
-
-response_elisa = response_elisa %>%
   filter(participant_id %in% participants)
 
 # Depending on the assay, there may be multiple viral strains or analytes measured.
@@ -67,21 +60,17 @@ response_nAb = response_nAb %>%
   rename(response_strain_analyte = virus) %>%
   mutate(assay = "nAb")
 
-# Filter ELISA data for IgG and Hepatitis B antibodies
-response_elisa = response_elisa %>%
-  filter(grepl("IgG", analyte) |
-           analyte == "Hepatitis B Virus Surface Antibody") %>%
-  rename(response_strain_analyte = analyte) %>%
-  mutate(assay = "elisa")
-
 # Now merge all the raw response data
-response_raw_merged = bind_rows(response_nAb, response_elisa, response_hai) %>%
+raw_response_influenzain = bind_rows(response_nAb, response_hai) %>%
+  select(-gender) %>% 
   arrange(participant_id) %>%
   distinct()
 
 # First get the studies and other clinical data corresponding to each participant id
-hipc_studies = hipc_clinical %>%
+hipc_studies = hipc_clinical_all_noNorm %>%
   select(participant_id,
+         age_imputed,
+         gender,
          study_accession,
          vaccine,
          vaccine_type,
@@ -89,136 +78,63 @@ hipc_studies = hipc_clinical %>%
   distinct()
 
 # Merge the study names into the immune response data (it is not directly given)
-response_raw_merged_studies = merge(x = response_raw_merged,
-                                    y = hipc_studies,
-                                    by = "participant_id",
-                                    all = F)
-
-# There are a series of study-specific errors which have been inferred from the "immuneResponseCallGeneration.R" script in the ImmuneSignatures2 GitHub page.
-# We fix these here.
-# First, "SDY1276" is apparently scaled in log4.
-
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(value_preferred = if_else(
-    study_accession == "SDY1276",
-    4^value_preferred,
+raw_response_influenzain = merge(x = raw_response_influenzain,
+                                 y = hipc_studies,
+                                 by = "participant_id",
+                                 all = F) %>%
+  select(
+    participant_id,
+    study_accession,
+    age_imputed, 
+    gender,
+    response_strain_analyte,
+    assay,
+    study_time_collected,
     value_preferred
-  ))
-
-# Next, "SDY1289" has some nAb baseline values at exactly 0, these are set to 1.
-
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(value_preferred = if_else(
-    (
-      study_accession == "SDY1289" &
-        value_preferred == 0 &
-        as.numeric(study_time_collected) == 0
-    ) ,
-    1,
-    value_preferred
-  ))
-
-# "SDY1264" lacks baseline data. The investigators create this row, where the baseline value is set to 1 for everyone.
-
-day_zero <- response_raw_merged_studies %>%
-  filter(study_accession == "SDY1264") %>%        # pull out SDY1264
-  distinct(participant_id, .keep_all = TRUE) %>%   # keep only one row per participant
-  mutate(
-    study_time_collected = 0,
-    # reset time to “0”
-    value_preferred      = 1                     # set preferred value to 1
   )
 
-# Bind them back on to the full dataset
-response_raw_merged_studies <- bind_rows(response_raw_merged_studies, day_zero)
+# Use fs::path() to specify the data path robustly
+p_save <- fs::path(processed_data_folder, "raw_response_influenzain_all_noNorm.rds")
 
-# "SDY1328" has an incorrect time label. Apparently, the data which is claimed to be taken at day 7 should actually be at day 30.
+# Save dataframe
+saveRDS(raw_response_influenzain, file = p_save)
 
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(study_time_collected = if_else(
-    (study_accession == "SDY1328" &
-       study_time_collected == 7) ,
-    30,
-    study_time_collected
-  ))
-
-# Additionally, this study has some anomalies at day 0, where data suggests these participants have antibody responses prior to vaccination.
-# The investigators set baseline values as well as values of 2.5 to 1.
-
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(value_preferred = if_else((
-    study_accession == "SDY1328" &
-      (value_preferred == 2.5 | study_time_collected == 0)
-  ), 1, value_preferred))
-
-# Furthermore, apparently these values need to be transformed with log2. This also applies to SDY984.
-
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(value_preferred = if_else(((study_accession == "SDY1328" |
-                                       study_accession == "SDY984") &
-                                      assay == "elisa"
-  ), log2(value_preferred), value_preferred))
-
-# For "SDY1260", the values need to be de-transformed from log2.
-
-response_raw_merged_studies = response_raw_merged_studies %>%
-  mutate(value_preferred = if_else(
-    (study_accession == "SDY1260" &
-       assay == "elisa"),
-    2^value_preferred,
-    value_preferred
-  ))
-
-# Furthermore, the IgG serotype values need to be summed within each participant, timepoint, and vaccine.
-
-response_raw_merged_studies <- response_raw_merged_studies %>%
-  group_by(participant_id,
-           study_time_collected,
-           vaccine,
-           vaccine_type,
-           pathogen) %>%
-  mutate(value_preferred = if_else(
-    (study_accession == "SDY1260" & assay == "elisa"),
-    # sum only the SDY1260 values within this group, then log2
-    log2(sum(value_preferred[study_accession == "SDY1260"])),
-    # otherwise leave unchanged
-    value_preferred
-  )) %>%
-  ungroup()
+# Now derive maximum fold-change values for each individual
 
 # We intend to predict on immune response data at day 28 (plus or minus 7 days), so we filter to get the immune data at these timepoints or pre-vaccination.
 
-response_raw_merged_studies = response_raw_merged_studies %>%
+raw_response_influenzain = raw_response_influenzain %>%
   filter((study_time_collected < 36 &
             study_time_collected > 20) | study_time_collected <= 0)
 
-response_raw_merged = response_raw_merged_studies %>%
-  select(-c(study_accession, vaccine, vaccine_type, pathogen))
 
 # Now derive MFC values, taking most recent measurement as baseline in the case where there are two pre-vaccination measurements
 
-pre_vax <- response_raw_merged %>%
+pre_vax <- raw_response_influenzain %>%
   filter(study_time_collected <= 0) %>%
   group_by(participant_id, assay, response_strain_analyte) %>%
   slice_max(study_time_collected, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
   rename(response_MFC_pre_value = value_preferred,
-         response_MFC_pre_time = study_time_collected)
+         response_MFC_pre_time = study_time_collected) %>% 
+  select(participant_id, study_accession, assay, response_strain_analyte, response_MFC_pre_time, response_MFC_pre_value)
 
-post_vax <- response_raw_merged %>%
+post_vax <- raw_response_influenzain %>%
   filter(study_time_collected > 0) %>%
   rename(response_MFC_post_value = value_preferred,
-         response_MFC_post_time = study_time_collected)
+         response_MFC_post_time = study_time_collected) %>% 
+  select(participant_id, study_accession, assay, response_strain_analyte, response_MFC_post_time, response_MFC_post_value)
 
 # Now we merge pre- and post- values to get a dataframe in wide format with one line per unique combination of participant/assay/strain-analyte
 merged_vax <- full_join(
   pre_vax,
   post_vax,
-  by = c("participant_id", "response_strain_analyte", "assay"),
+  by = c("participant_id", "study_accession","response_strain_analyte", "assay"),
   relationship = "many-to-many"
 ) %>%
   select(
     participant_id,
+    study_accession,
     assay,
     response_strain_analyte,
     response_MFC_pre_time,
@@ -253,21 +169,27 @@ response_MFC_df <- merged_vax %>%
   ) %>%
   # Calculate log2 fold change
   mutate(
-    response_log2_MFC = log2(response_MFC),
-    response_log2_MFC = ifelse(is.infinite(response_log2_MFC), NA, response_log2_MFC)
+    response_log2_MFC = ifelse(is.infinite(log2(response_MFC)), NA, log2(response_MFC)),
+    response_log2_MFC_pre_value = log2(response_MFC_pre_value),
+    response_log2_MFC_post_value = log2(response_MFC_post_value)
   ) %>%
   # Select relevant columns
   select(
     participant_id,
-    response_strain_analyte,
+    study_accession,
     assay,
+    response_strain_analyte,
     response_MFC_pre_time,
     response_MFC_post_time,
     response_MFC_pre_value,
     response_MFC_post_value,
-    response_MFC,
+    response_MFC, 
+    response_log2_MFC_pre_value,
+    response_log2_MFC_post_value,
     response_log2_MFC
   )
+
+
 
 # Now, for each participant, we can derive the maximum of these fold changes.
 ## Across all assays
@@ -283,6 +205,8 @@ max_response_MFC_df_any <- response_MFC_df %>%
     immResp_MFC_anyAssay_pre_value = response_MFC_pre_value,
     immResp_MFC_anyAssay_post_value = response_MFC_post_value,
     immResp_MFC_anyAssay_MFC = response_MFC,
+    immResp_MFC_anyAssay_log2_pre_value = response_log2_MFC_pre_value,
+    immResp_MFC_anyAssay_log2_post_value = response_log2_MFC_post_value,
     immResp_MFC_anyAssay_log2_MFC = response_log2_MFC
   )
 
@@ -301,21 +225,9 @@ max_response_MFC_df_nAb = max_response_MFC_df_each %>%
     immResp_MFC_nAb_pre_value = response_MFC_pre_value,
     immResp_MFC_nAb_post_value = response_MFC_post_value,
     immResp_MFC_nAb_MFC = response_MFC,
+    immResp_MFC_nAb_log2_pre_value = response_log2_MFC_pre_value,
+    immResp_MFC_nAb_log2_post_value = response_log2_MFC_post_value,
     immResp_MFC_nAb_log2_MFC = response_log2_MFC
-  ) %>%
-  select(-assay)
-
-
-max_response_MFC_df_elisa = max_response_MFC_df_each %>%
-  filter(assay == "elisa") %>%
-  rename(
-    immResp_MFC_elisa_response_strain_analyte = response_strain_analyte,
-    immResp_MFC_elisa_pre_time = response_MFC_pre_time,
-    immResp_MFC_elisa_post_time = response_MFC_post_time,
-    immResp_MFC_elisa_pre_value = response_MFC_pre_value,
-    immResp_MFC_elisa_post_value = response_MFC_post_value,
-    immResp_MFC_elisa_MFC = response_MFC,
-    immResp_MFC_elisa_log2_MFC = response_log2_MFC
   ) %>%
   select(-assay)
 
@@ -328,18 +240,42 @@ max_response_MFC_df_hai = max_response_MFC_df_each %>%
     immResp_MFC_hai_pre_value = response_MFC_pre_value,
     immResp_MFC_hai_post_value = response_MFC_post_value,
     immResp_MFC_hai_MFC = response_MFC,
+    immResp_MFC_hai_log2_pre_value = response_log2_MFC_pre_value,
+    immResp_MFC_hai_log2_post_value = response_log2_MFC_post_value,
     immResp_MFC_hai_log2_MFC = response_log2_MFC
   ) %>%
   select(-assay)
 
-# Now merge those dataframes together to get the final immune response data
+mean_response_nAb <- response_MFC_df %>%
+  filter(assay == "nAb") %>%
+  group_by(participant_id, study_accession) %>%
+  summarise(immResp_mean_nAb_pre_value  = mean(response_MFC_pre_value,  na.rm = TRUE),
+            immResp_mean_nAb_post_value = mean(response_MFC_post_value, na.rm = TRUE),
+            .groups = "drop") %>% 
+  mutate(immResp_mean_nAb_log2_pre_value = log2(immResp_mean_nAb_pre_value),
+         immResp_mean_nAb_log2_post_value = log2(immResp_mean_nAb_post_value),
+         immResp_mean_nAb_FC = immResp_mean_nAb_post_value/immResp_mean_nAb_pre_value,
+         immResp_mean_nAb_log2_FC = log2(immResp_mean_nAb_FC))
+
+mean_response_hai <- response_MFC_df %>%
+  filter(assay == "hai") %>%
+  group_by(participant_id, study_accession) %>%
+  summarise(immResp_mean_hai_pre_value  = mean(response_MFC_pre_value,  na.rm = TRUE),
+            immResp_mean_hai_post_value = mean(response_MFC_post_value, na.rm = TRUE),
+            .groups = "drop") %>% 
+  mutate(immResp_mean_hai_log2_pre_value = log2(immResp_mean_hai_pre_value),
+         immResp_mean_hai_log2_post_value = log2(immResp_mean_hai_post_value),
+         immResp_mean_hai_FC = immResp_mean_hai_post_value/immResp_mean_hai_pre_value,
+         immResp_mean_hai_log2_FC = log2(immResp_mean_hai_FC))
+
 hipc_immResp <- list(
   max_response_MFC_df_any,
   max_response_MFC_df_nAb,
-  max_response_MFC_df_elisa,
-  max_response_MFC_df_hai
+  max_response_MFC_df_hai,
+  mean_response_nAb,
+  mean_response_hai
 ) %>%
-  reduce(full_join, by = "participant_id") %>%
+  reduce(full_join, by = c("participant_id", "study_accession")) %>%
   arrange(participant_id)
 
 # Use fs::path() to specify the data path robustly
