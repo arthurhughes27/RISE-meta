@@ -28,7 +28,7 @@ tp <- c(1)
 timepoints_to_keep <- c(0, tp)
 
 hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
-  mutate(study_time_collected = ifelse(study_time_collected %in% c(2), 1, study_time_collected)) %>%
+  # mutate(study_time_collected = ifelse(study_time_collected %in% c(2), 1, study_time_collected)) %>%
   mutate(
     response_pre = ifelse(
       study_accession %in% c("SDY80", "SDY180", "SDY1276", "SDY67"),
@@ -66,9 +66,21 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
   ) %>%
   arrange(participant_id)
 
-# Analysis ten: geneset-level features
+# For each study, randomly assign 66% of participants to training
+train_indices <- hipc_merged_all_noNorm_filtered %>%
+  distinct(study_accession, participant_id) %>%  # unique participants per study
+  group_by(study_accession) %>%
+  slice_sample(prop = 0.66) %>%                # sample 66% of participants per study
+  ungroup()
 
-hipc_merged_all_noNorm_filtered_copy = hipc_merged_all_noNorm_filtered
+# df_train: all rows corresponding to selected participants
+df_train <- hipc_merged_all_noNorm_filtered %>%
+  semi_join(train_indices, by = c("study_accession", "participant_id"))
+
+# df_test: the remaining participants
+df_test <- hipc_merged_all_noNorm_filtered %>%
+  anti_join(train_indices, by = c("study_accession", "participant_id"))
+
 
 innate_pathways = c(
   "Interferon/Antiviral Sensing",
@@ -92,8 +104,6 @@ BTM_genes = BTM[["genesets"]][which(BTM[["geneset.aggregates"]] %in% innate_path
   unlist()
 
 BTM_genes_names = BTM[["geneset.names.descriptions"]][which(BTM[["geneset.aggregates"]] %in% innate_pathways)]
-
-df_train = hipc_merged_all_noNorm_filtered_copy
 
 yone = df_train %>%
   filter(study_time_collected > 0) %>%
@@ -198,37 +208,71 @@ p1 = rise.screen.meta.result[["gamma.s.plot"]]$forest.plot
 
 p1
 
-# ggsave(
-#   filename = "rise_influenzain_d7_BTMmean_meta.pdf",
-#   path = application_figures_folder,
-#   plot = p1,
-#   width = 27,
-#   height = 17,
-#   units = "cm"
-# )
-
-p2 = rise.screen.meta.result[["gamma.s.plot"]]$similarity.plots$upset.plot
+p2 = rise.screen.meta.result[["gamma.s.plot"]]$fit.plot
 
 p2
 
-# ggsave(
-#   filename = "rise_influenzain_d7_BTMmean_crossstudy_similarities.pdf",
-#   path = application_figures_folder,
-#   plot = p2,
-#   width = 27,
-#   height = 17,
-#   units = "cm"
-# )
+yone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  pull(response_post)
 
-p3 = rise.screen.meta.result[["gamma.s.plot"]]$fit.plot
+yzero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  pull(response_pre)
+
+sone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  select(any_of(BTM_genes))
+
+szero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  select(any_of(BTM_genes))
+
+# aggregate sone and szero
+sone <- aggregate_to_geneset(
+  df = sone,
+  genesets = BTM[["genesets"]][which(BTM[["geneset.aggregates"]] %in% innate_pathways)],
+  geneset_names = BTM_genes_names,
+  FUN = mean
+)
+
+szero <- aggregate_to_geneset(
+  df = szero,
+  genesets = BTM[["genesets"]][which(BTM[["geneset.aggregates"]] %in% innate_pathways)],
+  geneset_names = BTM_genes_names,
+  FUN = mean
+)
+
+studyone = df_test %>%
+  filter(study_time_collected > 0) %>%
+  pull(study_accession)
+
+studyzero = df_test %>%
+  filter(study_time_collected == 0) %>%
+  pull(study_accession)
+
+rise.evaluate.meta.result = rise.evaluate.meta(
+  yone,
+  yzero,
+  sone = sone,
+  szero = szero,
+  studyone,
+  studyzero,
+  alpha = 0.05,
+  epsilon.meta = 0.2,
+  alternative = "two.sided",
+  paired.all = T,
+  epsilon.study = 0.2,
+  p.correction = "none",
+  show.pooled.effect = T,
+  screening.weights = rise.screen.meta.result[["screening.weights"]],
+  markers = rise.screen.meta.result[["significant.markers"]]
+)
+
+p3 = rise.evaluate.meta.result[["gamma.s.plot"]]$forest.plot
 
 p3
 
-# ggsave(
-#   filename = "rise_influenzain_d7_BTMmean_crossstudy_meta_fitplot.pdf",
-#   path = application_figures_folder,
-#   plot = p3,
-#   width = 37,
-#   height = 20,
-#   units = "cm"
-# )
+p4 = rise.evaluate.meta.result[["gamma.s.plot"]]$fit.plot
+
+p4
