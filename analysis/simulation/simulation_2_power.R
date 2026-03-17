@@ -47,7 +47,7 @@ for (i in seq_len(nrow(results))) {
       epsilon = epsilon,
       alpha = alpha,
       alternative = "two.sided",
-      sample.sizes = sample_sizes
+      test = "knha"
     )
     p_vals[j] <- resj$results$p
   }
@@ -55,49 +55,7 @@ for (i in seq_len(nrow(results))) {
   results$tpr[i] <- mean(p_vals < alpha, na.rm = TRUE)
 }
 
-p1 = ggplot(results, aes(
-  y = factor(u_tau_max),
-  x = factor(u_nu_max),
-  fill = tpr
-)) +
-  geom_tile(color = "white") +
-  geom_text(aes(label = sprintf("%.3f", tpr)), size = 4) +
-  facet_wrap( ~ M, labeller = labeller(
-    M = function(x)
-      paste("N trials =", x)
-  )) +
-  scale_fill_gradientn(
-    colours = c("white", "#26B332"),
-    values = scales::rescale(c(0, alpha, 1)),
-    limits = c(0, 1)
-  ) +
-  labs(x = "Maximum between-trial variance",
-       y = "Maximum within-study variance",
-       fill = "Power",
-       title = "Power - true positive rate across different settings") +
-  theme_minimal(base_size = 20) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.title = element_text(size = 30, hjust = 0.5),
-    panel.spacing = unit(5, "lines"),
-    # increase spacing between facets
-    strip.background = element_rect(fill = "#f0f0f0", color = "black"),
-    # gray background for facet labels
-    strip.text = element_text(face = "bold", size = 16)                   # bold facet text
-  )
-
-p1
-
-ggsave(
-  filename = "power_tileplot.pdf",
-  path = simulation_figures_folder,
-  plot = p1,
-  width = 40,
-  height = 18,
-  units = "cm"
-)
-
-p2 <- ggplot(results, aes(
+p1 <- ggplot(results, aes(
   x = factor(u_tau_max, levels = sort(unique(u_tau_max))),
   y = tpr,
   color = factor(u_nu_max),
@@ -126,12 +84,12 @@ p2 <- ggplot(results, aes(
     legend.position = "right"                                     # move legend to the right
   )
 
-p2
+p1
 
 ggsave(
   filename = "power_lineplot.pdf",
   path = simulation_figures_folder,
-  plot = p2,
+  plot = p1,
   width = 40,
   height = 18,
   units = "cm"

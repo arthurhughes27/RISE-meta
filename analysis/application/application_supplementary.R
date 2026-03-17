@@ -203,7 +203,8 @@ run_screen <- function(inputs, p_correction = "BH") {
     epsilon.study                = 0.2,
     p.correction                 = p_correction,
     show.pooled.effect           = TRUE,
-    return.study.similarity.plot = FALSE
+    return.study.similarity.plot = FALSE,
+    test = "knha"
   )
 }
 
@@ -368,7 +369,8 @@ evaluate_d1d2 <- rise.evaluate.meta(
   show.pooled.effect = TRUE,
   # Pass screening weights and selected markers from the training stage
   screening.weights  = screen_d1d2[["screening.weights"]],
-  markers            = screen_d1d2[["significant.markers"]]
+  markers            = screen_d1d2[["significant.markers"]],
+  test = "knha"
 )
 
 # Save evaluation forest plot

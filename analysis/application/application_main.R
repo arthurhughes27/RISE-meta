@@ -140,7 +140,8 @@ rise_screen_result <- rise.screen.meta(
   epsilon.study                = 0.2,
   p.correction                 = "BH",
   show.pooled.effect           = TRUE,
-  return.study.similarity.plot = FALSE
+  return.study.similarity.plot = FALSE,
+  test= "knha"
 )
 
 # Extract per-marker screening metrics from result
@@ -264,11 +265,14 @@ rise_evaluate_result <- rise.evaluate.meta(
   show.pooled.effect = TRUE,
   # Pass screening weights and selected markers from the training stage
   screening.weights  = rise_screen_result[["screening.weights"]],
-  markers            = rise_screen_result[["significant.markers"]]
+  markers            = rise_screen_result[["significant.markers"]],
+  test = "knha"
 )
 
 # Save evaluation forest plot
 p4 <- rise_evaluate_result[["gamma.s.plot"]]$forest.plot
+
+p4
 
 ggsave(
   filename = "TIV_evaluation_forest.pdf",
