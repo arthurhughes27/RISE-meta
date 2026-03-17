@@ -99,12 +99,12 @@ n_studies_max = df$study_accession %>% # How many total studies
   length()
 
 # Number-of-studies grid. For each run, we randomly sample a given number of studies
-n_studies_grid   <- c(3, 4, 5, 8, n_studies_max)
+n_studies_grid   <- c(2:n_studies_max)
 # Set labels for later plotting
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
 # Number of permutation replicates
-B <- 10
+B <- 100
 
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.
@@ -213,7 +213,7 @@ saveRDS(fpr_df, file = p_save)
 
 # Boxplots for each number of studies
 p1 = ggplot(fpr_df, aes(x = n_studies, y = fpr)) +
-  geom_boxplot() +
+  geom_violin() +
   geom_hline(
     yintercept = alpha,
     colour = "black",

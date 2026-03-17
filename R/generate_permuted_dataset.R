@@ -27,7 +27,7 @@ generate_permuted_dataset <- function(df, gene_names, seed, n_within_study = NUL
   if (!is.null(n_studies)) {
     all_studies    <- unique(df$study_accession)
     sampled_studies <- sample(all_studies, size = min(n_studies, length(all_studies)))
-    df <- df |> filter(study_accession %in% sampled_studies)
+    df <- df %>% filter(study_accession %in% sampled_studies)
   }
 
   # optional subsampling of participants within each study
