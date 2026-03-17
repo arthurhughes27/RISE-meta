@@ -1,51 +1,66 @@
 # Simulation study with permuted dataset to examine the calibration of the approach
 # R script to illustrate a meta-analysis with RISE
+
+# Libraries
 library(tidyverse)
 library(SurrogateRank)
 library(knitr)
 library(kableExtra)
 
+# Set a global seed
 set.seed(08012025)
 
-# Directory containing engineered / processed data files
+# Directory containing processed data files
 processed_data_folder <- "data"
+
 # Folder to store images
-application_figures_folder = fs::path("output", "figures", "application")
+results_folder = fs::path("output", "results", "simulation")
+figures_folder = fs::path("output", "figures", "simulation")
+functions_folder = fs::path("R")
 
-source("./R/generate_permuted_dataset.R")
+# Source the function to generate a permuted dataset
 
-# Paths to processed gene-level data and gene-set objects
+source(fs::path(functions_folder, "generate_permuted_dataset.R"))
+
+# Paths to real dataset
 p_load_expr_all_noNorm <- fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds")
-p_load_BTM <- fs::path(processed_data_folder, "BTM_processed.rds")
 
 # Load data objects
 hipc_merged_all_noNorm <- readRDS(p_load_expr_all_noNorm)
-BTM <- readRDS(p_load_BTM)
 
+# Extract the names of the markers
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where(~ !any(is.na(.)))) %>%
+  select(where( ~ !any(is.na(.)))) %>%
   colnames()
 
+# Set the nominal significance level
 alpha = 0.05
 
+# Set the post-vaccination timepoint of interest
+# In this case, we choose day 7, because we have the most studies at this timepoint
 tp <- c(7)
+
+# Keep day 0 and day 7
 timepoints_to_keep <- c(0, tp)
 
-# Within-study sample size grid: smallest first, full dataset last (NA = no resampling)
-sample_sizes <- c(10, 25, 35, NA_real_)
+# Within-study sample size grid: in this script, do not subsample from studies
 sample_sizes <- c(NA_real_)
+# Set a label for sample sizes for later plotting
 size_labels  <- ifelse(is.na(sample_sizes), "Full", as.character(sample_sizes))
 
-
+# Filter the data to contain only relevant samples
 df <- hipc_merged_all_noNorm %>%
   mutate(
     response_pre = ifelse(
+      # Set the pre-vaccination response like in the application
       study_accession %in% c("SDY80", "SDY180", "SDY1276", "SDY67"),
       immResp_mean_nAb_pre_value,
-      immResp_mean_hai_pre_value
+      # neutralising antibodies if available
+      immResp_mean_hai_pre_value # if nAb not available, take HAI assay
     ),
     response_post = ifelse(
+      # Set the post-vaccination response like in the application
       study_accession %in% c("SDY80", "SDY180", "SDY1276", "SDY67"),
       immResp_mean_nAb_post_value,
       immResp_mean_hai_post_value
@@ -53,17 +68,20 @@ df <- hipc_merged_all_noNorm %>%
   ) %>%
   filter(
     !is.na(immResp_MFC_anyAssay_log2_MFC),
+    # Participants must have both pre and post response
     vaccine_name == "Influenza (IN)",
-    study_time_collected %in% timepoints_to_keep
+    # Participants receive inactivated influenza vaccine
+    study_time_collected %in% timepoints_to_keep # Samples at chosen timepoints
   ) %>%
-  group_by(participant_id) %>%
+  group_by(participant_id) %>% # Check participants have both pre and post measurements
   filter(sum(study_time_collected == 0) == 1,
          sum(study_time_collected == tp) == 1) %>%
   ungroup() %>%
   group_by(study_accession) %>%
-  # filter(length(unique(participant_id)) > max(sample_sizes, na.rm = TRUE)) %>%
+  filter(length(unique(participant_id)) > 19) %>% # Filter out studies with less than 20 participants
   ungroup() %>%
   select(
+    # Select relevant columns
     participant_id,
     age_imputed,
     gender,
@@ -74,18 +92,19 @@ df <- hipc_merged_all_noNorm %>%
     response_post,
     all_of(gene_names)
   ) %>%
-  arrange(participant_id)
+  arrange(participant_id) # Fix order
 
-n_studies_max = df$study_accession %>%
+n_studies_max = df$study_accession %>% # How many total studies
   unique() %>%
   length()
 
-# Number-of-studies grid: 2 to 5, plus all studies (NA = no subsampling)
+# Number-of-studies grid. For each run, we randomly sample a given number of studies
 n_studies_grid   <- c(3, 4, 5, 8, n_studies_max)
+# Set labels for later plotting
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
 # Number of permutation replicates
-B <- 100
+B <- 10
 
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.
@@ -146,7 +165,7 @@ for (j in seq_along(n_studies_grid)) {
         paired.all = TRUE,
         return.all.screen = TRUE,
         epsilon.study = 0.2,
-        p.correction = "BH",
+        p.correction = "none",
         show.pooled.effect = TRUE,
         return.study.similarity.plot = FALSE,
         n.cores = 6,
@@ -183,7 +202,8 @@ for (j in seq_along(n_studies_grid)) {
 # Convert to long data frame with ordered factors
 fpr_df <- bind_rows(results)
 
-results_folder = fs::path("output", "simulation")
+fpr_df = fpr_df %>%
+  mutate(n_studies = factor(n_studies, levels = n_studies_grid))
 
 # Use fs::path() to specify the data path robustly
 p_save <- fs::path(results_folder, "simulation_nonparametric_nstudies.rds")
@@ -191,8 +211,8 @@ p_save <- fs::path(results_folder, "simulation_nonparametric_nstudies.rds")
 # Save dataframe
 saveRDS(fpr_df, file = p_save)
 
-# Faceted boxplot: x = within-study sample size, facets = number of studies
-ggplot(fpr_df, aes(x = n_within_study, y = fpr)) +
+# Boxplots for each number of studies
+p1 = ggplot(fpr_df, aes(x = n_studies, y = fpr)) +
   geom_boxplot() +
   geom_hline(
     yintercept = alpha,
@@ -200,10 +220,23 @@ ggplot(fpr_df, aes(x = n_within_study, y = fpr)) +
     linetype = "dashed",
     alpha = 0.8
   ) +
-  scale_y_continuous(limits = c(0, 1)) +
-  facet_wrap( ~ n_studies, labeller = label_both) +
+  scale_y_continuous(limits = c(0, 0.1)) +
   labs(
-    x = "Within-study sample size",
+    x = "Number of studies",
     y = "False positive rate",
-    title = sprintf("FPR distribution over %d permutations", B)
-  )
+    title = sprintf("FPR distribution per number of studies over %d permutations", B)
+  ) +
+  theme_minimal(base_size = 20) +
+  theme(plot.title = element_text(hjust = 0.5, size = 25),
+        axis.title = element_text(size = 23))
+
+p1
+
+ggsave(
+  filename = "simulation_nonparametric_1_nstudies.pdf",
+  path = figures_folder,
+  plot = p1,
+  width = 40,
+  height = 18,
+  units = "cm"
+)
