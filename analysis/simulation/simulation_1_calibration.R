@@ -10,6 +10,7 @@ alpha <- 0.05
 Ms <- c(3, 10, 25)
 tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 nu_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
+fixed_sample_size = 50
 
 results <- expand.grid(
   M = Ms,
@@ -24,7 +25,7 @@ for (i in seq_len(nrow(results))) {
   u_tau_max <- results$u_tau_max[i]
   u_nu_max <- results$u_nu_max[i]
   
-  sample_sizes <- seq(25, 25 * M, 25)
+  sample_sizes <- rep(fixed_sample_size, M)
   
   data <- simulate.multi.study.surrogates(
     epsilon = epsilon,

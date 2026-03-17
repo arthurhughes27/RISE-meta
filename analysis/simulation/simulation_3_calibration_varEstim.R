@@ -12,7 +12,9 @@ tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 nu_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 test_vals <- c("knha", "z")
 
-sample_sizes <- seq(25, 25 * M, 25)
+fixed_sample_size = 50
+
+sample_sizes <- rep(fixed_sample_size, M)
 
 results <- expand.grid(
   u_tau_max = tau_max_vals,

@@ -104,7 +104,7 @@ n_studies_grid   <- c(2:n_studies_max)
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
 # Number of permutation replicates
-B <- 100
+B <- 1000
 
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.

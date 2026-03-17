@@ -3,7 +3,7 @@ library(tidyverse)
 
 simulation_figures_folder = fs::path("output", "figures", "simulation")
 
-J <- 1000
+J <- 10000
 M <- 5
 epsilon <- 0.1
 alpha <- 0.05
