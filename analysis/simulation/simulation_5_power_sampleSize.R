@@ -9,6 +9,8 @@ M <- 5
 epsilon <- 0.1
 alpha <- 0.05
 
+fixed_sample_size = 50
+
 n_vals       <- c(10, 25, 50, 75, 100)
 tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 nu_max_vals  <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
@@ -26,7 +28,7 @@ for (i in seq_len(nrow(results))) {
   u_tau_max <- results$u_tau_max[i]
   u_nu_max  <- results$u_nu_max[i]
 
-  sample_sizes <- rep(n, M)
+  sample_sizes <- rep(fixed_sample_size, M)
 
   data <- simulate.multi.study.surrogates(
     epsilon = epsilon,
