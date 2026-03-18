@@ -2,6 +2,7 @@ library(SurrogateRank)
 library(tidyverse)
 
 simulation_figures_folder = fs::path("output", "figures", "simulation")
+simulation_results_folder = fs::path("output", "results", "simulation")
 
 J <- 10000
 M <- 5
@@ -57,6 +58,8 @@ for (i in seq_len(nrow(results))) {
 }
 
 
+saveRDS(results, file = fs::path(simulation_results_folder, "simulation_5_power_sampleSize.rds"))
+
 p1 <- ggplot(results, aes(
   x = factor(u_tau_max, levels = sort(unique(u_tau_max))),
   y = tpr,
@@ -100,3 +103,5 @@ ggsave(
   height = 18,
   units = "cm"
 )
+
+rm(list = ls())

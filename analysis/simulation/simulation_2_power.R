@@ -2,6 +2,7 @@ library(SurrogateRank)
 library(tidyverse)
 
 simulation_figures_folder = fs::path("output", "figures", "simulation")
+simulation_results_folder = fs::path("output", "results", "simulation")
 
 J <- 10000
 epsilon <- 0.1
@@ -55,6 +56,8 @@ for (i in seq_len(nrow(results))) {
   results$tpr[i] <- mean(p_vals < alpha, na.rm = TRUE)
 }
 
+saveRDS(results, file = fs::path(simulation_results_folder, "simulation_2_power.rds"))
+
 p1 <- ggplot(results, aes(
   x = factor(u_tau_max, levels = sort(unique(u_tau_max))),
   y = tpr,
@@ -94,3 +97,5 @@ ggsave(
   height = 18,
   units = "cm"
 )
+
+rm(list = ls())

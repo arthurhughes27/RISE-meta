@@ -2,6 +2,7 @@ library(SurrogateRank)
 library(tidyverse)
 
 simulation_figures_folder = fs::path("output", "figures", "simulation")
+simulation_results_folder = fs::path("output", "results", "simulation")
 
 J <- 10000
 epsilon <- 0.1
@@ -58,6 +59,8 @@ for (i in seq_len(nrow(results))) {
 }
 
 
+saveRDS(results, file = fs::path(simulation_results_folder, "simulation_1_calibration.rds"))
+
 p1 <- ggplot(results, aes(
   x = factor(u_tau_max, levels = sort(unique(u_tau_max))),
   y = fpr,
@@ -103,3 +106,5 @@ ggsave(
   height = 18,
   units = "cm"
 )
+
+rm(list = ls())
