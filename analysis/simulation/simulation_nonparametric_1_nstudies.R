@@ -107,7 +107,7 @@ n_studies_grid   <- c(2:n_studies_max)
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
 # Number of permutation replicates
-B <- 10
+B <- 1000
 
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.
@@ -209,7 +209,7 @@ for (row in seq_len(n_cells)) {
         p.correction = "none",
         show.pooled.effect = TRUE,
         return.study.similarity.plot = FALSE,
-        n.cores = 10,
+        n.cores = 1,
         return.fit.plot = FALSE,
         return.forest.plot = FALSE,
         normalise.weights = FALSE,
@@ -295,4 +295,4 @@ ggsave(
   units = "cm"
 )
 
-# rm(list = ls())
+rm(list = ls())

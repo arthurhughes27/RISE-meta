@@ -23,6 +23,9 @@ gene_names <- hipc_merged_all_noNorm %>%
 # nAb studies use a different response variable than HAI studies
 nab_studies <- c("SDY80", "SDY180", "SDY1276", "SDY67")
 
+# Meta analysis method
+meta.analysis.method = "RE"
+
 # BTM gene sets and their names (excluding top-level aggregates)
 btm_filter <- which(BTM[["geneset.aggregates"]] != "NA")
 BTM_genes <- BTM[["genesets"]][btm_filter] %>% unlist()
@@ -107,51 +110,70 @@ filter_hipc <- function(tp) {
     arrange(participant_id)
 }
 
-# Build a forest plot of pooled effect estimates for the top N markers,
-# coloured by significance category, with dashed epsilon equivalence bounds
-make_screening_forest_plot <- function(screening_metrics, top_N = 15, epsilon_val = 0.2) {
+make_screening_forest_plot <- function(
+    screening_metrics,
+    top_N = 15,
+    epsilon_val = 0.2,
+    alpha = 0.05,
+    p_floor = 1e-2,
+    x_limits = c(-1, 1),
+    x_breaks = seq(-1, 1, by = 0.25)
+) {
   df_plot <- screening_metrics %>%
-    arrange(p.unadjusted) %>%
+    arrange(p.adjusted) %>%
     slice_head(n = top_N) %>%
     mutate(
-      # Reverse factor order so top marker appears at the top of the y-axis
       marker = factor(marker, levels = rev(unique(marker))),
-      sig_cat = case_when(
-        p.adjusted < 0.05                         ~ "adj < 0.05",
-        p.adjusted >= 0.05 & p.unadjusted < 0.05 ~ "unadj < 0.05 only",
-        TRUE                                      ~ "ns"
-      ),
-      sig_cat = factor(sig_cat, levels = c("adj < 0.05", "unadj < 0.05 only", "ns"))
+      logp   = -log10(p.adjusted),
+      logp   = pmin(logp, -log10(p_floor)),
+      sig    = p.adjusted < alpha
     )
-
+  
+  # Legend breaks on the natural p-value scale
+  p_breaks <- c(1, 0.1, 0.05, p_floor)
+  logp_breaks <- -log10(p_breaks)
+  
+  # Colour positions corresponding to the log scale
+  colour_values <- scales::rescale(
+    c(0, -log10(0.05), -log10(p_floor)),
+    from = c(0, -log10(p_floor))
+  )
+  
   ggplot(df_plot, aes(x = mu.delta, y = marker)) +
     geom_segment(
-      aes(x = ci.delta.lower, xend = ci.delta.upper, y = marker, yend = marker, color = sig_cat),
-      size = 1.1, lineend = "round"
+      aes(
+        x = ci.delta.lower, xend = ci.delta.upper,
+        y = marker, yend = marker,
+        color = logp
+      ),
+      linewidth = 1.1, lineend = "round"
     ) +
-    geom_point(aes(color = sig_cat), size = 4) +
-    # Dashed lines mark the equivalence bounds (+/- epsilon)
-    geom_vline(xintercept = c(-epsilon_val, epsilon_val), linetype = "dashed", color = "red", linewidth = 0.8) +
+    geom_point(aes(color = logp, shape = sig), size = 4) +
+    geom_vline(
+      xintercept = c(-epsilon_val, epsilon_val),
+      linetype = "dashed", color = "red", linewidth = 0.8
+    ) +
     geom_vline(xintercept = 0, color = "black", linewidth = 0.5) +
-    scale_x_continuous(limits = c(-1, 1), breaks = seq(-1, 1, by = 0.25)) +
-    scale_color_manual(
-      values = c(
-        "adj < 0.05"        = "#F20A0A",
-        "unadj < 0.05 only" = "#0A63F2",
-        "ns"                = "black"
-      ),
-      labels = c(
-        "adj < 0.05"        = "BH-adjusted p < 0.05",
-        "unadj < 0.05 only" = "Unadjusted p < 0.05 only",
-        "ns"                = "Not significant"
-      ),
+    scale_color_gradientn(
+      colors = c("#2C7BB6", "grey80", "#D7191C"),
+      values = colour_values,
+      limits = c(0, -log10(p_floor)),
+      breaks = logp_breaks,
+      labels = c("1", "0.1", "0.05", paste0("<", format(p_floor, scientific = TRUE))),
+      name = "Adjusted p-value",
+      oob = scales::squish
+    ) +
+    scale_shape_manual(
+      values = c(`TRUE` = 17, `FALSE` = 19),
+      labels = c(`TRUE` = expression(p < 0.05), `FALSE` = expression(p >= 0.05)),
       name = "Significance"
     ) +
     labs(
-      x     = expression("Pooled effect " ~ mu[delta]),
-      y     = NULL,
-      title = glue::glue("Screening results: Top {top_N} markers by p-value")
+      x = expression("Pooled effect " ~ mu[delta]),
+      y = NULL,
+      title = glue::glue("Screening results: Top {top_N} markers by adjusted p-value")
     ) +
+    scale_x_continuous(limits = x_limits, breaks = x_breaks) +
     theme_minimal(base_size = 20) +
     theme(
       plot.title         = element_text(size = 25, face = "bold", hjust = 0.5),
@@ -204,7 +226,8 @@ run_screen <- function(inputs, p_correction = "BH") {
     p.correction                 = p_correction,
     show.pooled.effect           = TRUE,
     return.study.similarity.plot = FALSE,
-    test = "knha"
+    test = "knha",
+    meta.analysis.method = meta.analysis.method
   )
 }
 
@@ -234,7 +257,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d2, top_N = 15)
 p3
 
 ggsave(
-  filename = "TIV_d2_screening.pdf",
+  filename = paste0("TIV_d2_screening_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -342,7 +365,7 @@ p4 <- make_screening_forest_plot(screening_metrics_d1d2, top_N = 15)
 p4
 
 ggsave(
-  filename = "TIV_d1d2_screening.pdf",
+  filename = paste0("TIV_d1d2_screening_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p4,
   width    = 40,
@@ -370,7 +393,8 @@ evaluate_d1d2 <- rise.evaluate.meta(
   # Pass screening weights and selected markers from the training stage
   screening.weights  = screen_d1d2[["screening.weights"]],
   markers            = screen_d1d2[["significant.markers"]],
-  test = "knha"
+  test = "knha",
+  meta.analysis.method = meta.analysis.method
 )
 
 # Save evaluation forest plot
@@ -378,7 +402,7 @@ p4 <- evaluate_d1d2[["gamma.s.plot"]]$forest.plot
 p4
 
 ggsave(
-  filename = "TIV_evaluation_forest_d1d2.pdf",
+  filename = paste0("TIV_evaluation_forest_d1d2_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p4,
   width    = 32,
@@ -391,7 +415,7 @@ p5 <- evaluate_d1d2[["gamma.s.plot"]]$fit.plot
 p5
 
 ggsave(
-  filename = "TIV_evaluation_fitplot_d1d2.pdf",
+  filename = paste0("TIV_evaluation_fitplot_d1d2_", meta.analysis.method,".pdf"),
   path     = application_figures_folder,
   plot     = p5,
   width    = 37,
@@ -425,7 +449,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d7, top_N = 15)
 p3
 
 ggsave(
-  filename = "TIV_d7_screening.pdf",
+  filename = paste0("TIV_d7_screening_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -441,7 +465,7 @@ p1 <- screen_d7_uncorrected[["gamma.s.plot"]]$forest.plot
 p1
 
 ggsave(
-  filename = "TIV_evaluation_forest_d7.pdf",
+  filename = paste0("TIV_evaluation_forest_d7_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p1,
   width    = 32,
@@ -486,7 +510,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d1_genes, top_N = 20)
 p3
 
 ggsave(
-  filename = "TIV_d1_screening_genewise.pdf",
+  filename = paste0("TIV_d1_screening_genewise_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -526,7 +550,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d2_genes, top_N = 20)
 p3
 
 ggsave(
-  filename = "TIV_d2_screening_genewise.pdf",
+  filename = paste0("TIV_d2_screening_genewise_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -566,7 +590,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d3_genes, top_N = 20)
 p3
 
 ggsave(
-  filename = "TIV_d3_screening_genewise.pdf",
+  filename = paste0("TIV_d3_screening_genewise_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -606,7 +630,7 @@ p3 <- make_screening_forest_plot(screening_metrics_d7_genes, top_N = 20)
 p3
 
 ggsave(
-  filename = "TIV_d7_screening_genewise.pdf",
+  filename = paste0("TIV_d7_screening_genewise_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
