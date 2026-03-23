@@ -17,7 +17,7 @@ BTM <- readRDS(fs::path(processed_data_folder, "BTM_processed.rds"))
 # Gene columns present in the data with no missing values
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where(~ !any(is.na(.)))) %>%
+  select(where( ~ !any(is.na(.)))) %>%
   colnames()
 
 # Day 1 post-vaccination; timepoints_to_keep includes baseline (day 0)
@@ -52,10 +52,8 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
     study_time_collected %in% timepoints_to_keep
   ) %>%
   group_by(participant_id) %>%
-  filter(
-    sum(study_time_collected == 0) == 1,
-    sum(study_time_collected == tp) == 1
-  ) %>%
+  filter(sum(study_time_collected == 0) == 1,
+         sum(study_time_collected == tp) == 1) %>%
   ungroup() %>%
   group_by(study_accession) %>%
   filter(length(unique(participant_id)) > 2) %>%
@@ -99,7 +97,8 @@ aggregate_to_geneset <- function(df, genesets, geneset_names, FUN = mean) {
     if (length(present) == 0)
       return(NULL)
     mat <- df[, present, drop = FALSE]
-    vec <- apply(mat, 1, function(r) FUN(r, na.rm = TRUE))
+    vec <- apply(mat, 1, function(r)
+      FUN(r, na.rm = TRUE))
     # Replace NaN (all-NA rows) with proper NA
     vec[is.nan(vec)] <- NA_real_
     tibble::tibble(!!geneset_names[i] := vec)
@@ -112,11 +111,11 @@ aggregate_to_geneset <- function(df, genesets, geneset_names, FUN = mean) {
 extract_rise_inputs <- function(df) {
   sone_raw  <- df %>% filter(study_time_collected > 0)  %>% select(any_of(BTM_genes))
   szero_raw <- df %>% filter(study_time_collected == 0) %>% select(any_of(BTM_genes))
-
+  
   list(
     yone      = df %>% filter(study_time_collected > 0)  %>% pull(response_post),
     yzero     = df %>% filter(study_time_collected == 0) %>% pull(response_pre),
-    sone      = aggregate_to_geneset(sone_raw,  BTM[["genesets"]][btm_filter], BTM_genes_names),
+    sone      = aggregate_to_geneset(sone_raw, BTM[["genesets"]][btm_filter], BTM_genes_names),
     szero     = aggregate_to_geneset(szero_raw, BTM[["genesets"]][btm_filter], BTM_genes_names),
     studyone  = df %>% filter(study_time_collected > 0)  %>% pull(study_accession),
     studyzero = df %>% filter(study_time_collected == 0) %>% pull(study_accession)
@@ -129,13 +128,15 @@ train_inputs <- extract_rise_inputs(df_train)
 
 # Screen for surrogate markers across studies using BH-corrected meta-analysis
 rise_screen_result <- rise.screen.meta(
-  train_inputs$yone,
-  train_inputs$yzero,
-  sone                        = train_inputs$sone,
-  szero                       = train_inputs$szero,
-  train_inputs$studyone,
-  train_inputs$studyzero,
+  yone                         = train_inputs$yone,
+  yzero                        = train_inputs$yzero,
+  sone                         = train_inputs$sone,
+  szero                        = train_inputs$szero,
+  studyone                     = train_inputs$studyone,
+  studyzero                    = train_inputs$studyzero,
   alpha                        = 0.05,
+  epsilon.meta.mode            = "user",
+  power.want.s.study           = 0.8,
   epsilon.meta                 = 0.2,
   alternative                  = "two.sided",
   paired.all                   = TRUE,
@@ -144,8 +145,9 @@ rise_screen_result <- rise.screen.meta(
   p.correction                 = "BH",
   show.pooled.effect           = TRUE,
   return.study.similarity.plot = FALSE,
-  test = "knha",
-  meta.analysis.method = meta.analysis.method
+  test                         = "knha",
+  meta.analysis.method         = meta.analysis.method,
+  n.cores                      = 5
 )
 
 # Extract per-marker screening metrics from result
@@ -155,9 +157,12 @@ screening_metrics <- rise_screen_result[["screening.metrics.meta"]]
 screening_metrics_select <- screening_metrics %>%
   arrange(p.unadjusted) %>%
   mutate(mu.delta.ci = paste0(
-    round(mu.delta, 3), " (",
-    round(ci.delta.lower, 3), ", ",
-    round(ci.delta.upper, 3), ")"
+    round(mu.delta, 3),
+    " (",
+    round(ci.delta.lower, 3),
+    ", ",
+    round(ci.delta.upper, 3),
+    ")"
   )) %>%
   select(marker, mu.delta.ci, p.unadjusted, p.adjusted) %>%
   filter(p.adjusted < 0.05)
@@ -180,81 +185,11 @@ p1
 p2 <- rise_screen_result[["gamma.s.plot"]]$fit.plot
 p2
 
-# Prepare top-N markers for the custom screening forest plot
-top_N <- 15
-epsilon_val <- 0.2
-alpha <- 0.05
-p_floor <- 1e-2   # practical lower bound for the colour scale
-
-df_plot <- screening_metrics %>%
-  arrange(p.adjusted) %>%
-  slice_head(n = top_N) %>%
-  mutate(
-    marker = factor(marker, levels = rev(unique(marker))),
-    logp    = -log10(p.adjusted),
-    logp    = pmin(logp, -log10(p_floor)),
-    sig     = p.adjusted < alpha
-  )
-
-# Legend breaks on the natural p-value scale
-p_breaks <- c(1, 0.1, 0.05, p_floor)
-logp_breaks <- -log10(p_breaks)
-
-# Colour positions corresponding to the log scale
-colour_values <- scales::rescale(
-  c(0, -log10(0.05), -log10(0.01), -log10(p_floor)),
-  from = c(0, -log10(p_floor))
-)
-
-p3 <- ggplot(df_plot, aes(x = mu.delta, y = marker)) +
-  geom_segment(
-    aes(
-      x = ci.delta.lower, xend = ci.delta.upper,
-      y = marker, yend = marker,
-      color = logp
-    ),
-    linewidth = 1.1, lineend = "round"
-  ) +
-  geom_point(aes(color = logp, shape = sig), size = 4) +
-  geom_vline(
-    xintercept = c(-epsilon_val, epsilon_val),
-    linetype = "dashed", color = "red", linewidth = 0.8
-  ) +
-  geom_vline(xintercept = 0, color = "black", linewidth = 0.5) +
-  scale_color_gradientn(
-    colors = c("#2C7BB6", "grey80", "#D7191C", "#8B0000"),
-    values = colour_values,
-    limits = c(0, -log10(p_floor)),
-    breaks = logp_breaks,
-    labels = c("1", "0.1", "0.05", paste0("<", format(p_floor, scientific = TRUE))),
-    name = "Adjusted p-value",
-    oob = scales::squish
-  ) +
-  scale_shape_manual(
-    values = c(`TRUE` = 17, `FALSE` = 19),
-    labels = c(`TRUE` = expression(p < 0.05), `FALSE` = expression(p >= 0.05)),
-    name = "Significance"
-  ) +
-  labs(
-    x = expression("Pooled effect " ~ mu[delta]),
-    y = NULL,
-    title = glue::glue("Screening results: Top {top_N} markers by adjusted p-value")
-  ) +
-  xlim(-1,1) +
-  theme_minimal(base_size = 20) +
-  theme(
-    plot.title         = element_text(size = 25, face = "bold", hjust = 0.5),
-    axis.text.y        = element_text(size = 13),
-    axis.text.x        = element_text(size = 15),
-    axis.title.x       = element_text(size = 30),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor   = element_blank()
-  )
-
+p3 = rise_screen_result[["gamma.s.plot"]]$screen.plot
 p3
 
 ggsave(
-  filename = paste0("TIV_d1_screening_", meta.analysis.method,".pdf"),
+  filename = paste0("TIV_d1_screening_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p3,
   width    = 40,
@@ -268,12 +203,12 @@ test_inputs <- extract_rise_inputs(df_test)
 
 # Evaluate significant markers from screening on held-out test data
 rise_evaluate_result <- rise.evaluate.meta(
-  test_inputs$yone,
-  test_inputs$yzero,
+  yone               = test_inputs$yone,
+  yzero              = test_inputs$yzero,
   sone               = test_inputs$sone,
   szero              = test_inputs$szero,
-  test_inputs$studyone,
-  test_inputs$studyzero,
+  studyone           = test_inputs$studyone,
+  studyzero          = test_inputs$studyzero,
   alpha              = 0.05,
   epsilon.meta       = 0.2,
   alternative        = "two.sided",
@@ -281,10 +216,12 @@ rise_evaluate_result <- rise.evaluate.meta(
   epsilon.study      = 0.2,
   p.correction       = "none",
   show.pooled.effect = TRUE,
-  # Pass screening weights and selected markers from the training stage
   screening.weights  = rise_screen_result[["screening.weights"]],
   markers            = rise_screen_result[["significant.markers"]],
-  test = "knha"
+  test               = "knha",
+  epsilon.meta.mode  = "user",
+  power.want.s.study = 0.8,
+  meta.analysis.method = meta.analysis.method
 )
 
 # Save evaluation forest plot
@@ -293,7 +230,7 @@ p4 <- rise_evaluate_result[["gamma.s.plot"]]$forest.plot
 p4
 
 ggsave(
-  filename = paste0("TIV_evaluation_forest_", meta.analysis.method,".pdf"),
+  filename = paste0("TIV_evaluation_forest_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p4,
   width    = 32,
@@ -307,7 +244,7 @@ p5 <- rise_evaluate_result[["gamma.s.plot"]]$fit.plot
 p5
 
 ggsave(
-  filename = paste0("TIV_evaluation_fitplot_", meta.analysis.method,".pdf"),
+  filename = paste0("TIV_evaluation_fitplot_", meta.analysis.method, ".pdf"),
   path     = application_figures_folder,
   plot     = p5,
   width    = 37,

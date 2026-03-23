@@ -1,0 +1,1 @@
+# Supplementary analysis file for fixed effects analysis

@@ -5,28 +5,30 @@ simulation_figures_folder = fs::path("output", "figures", "simulation")
 simulation_results_folder = fs::path("output", "results", "simulation")
 
 J <- 10000
+M <- 5
 epsilon <- 0.1
 alpha <- 0.05
 
-Ms <- c(3, 10, 25)
 tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 nu_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
+method_vals <- c("RE", "FE")
+
 fixed_sample_size = 50
 
+sample_sizes <- rep(fixed_sample_size, M)
+
 results <- expand.grid(
-  M = Ms,
   u_tau_max = tau_max_vals,
   u_nu_max = nu_max_vals,
+  meta.analysis.method = method_vals,
   stringsAsFactors = FALSE
 ) %>%
   mutate(fpr = NA_real_)
 
 for (i in seq_len(nrow(results))) {
-  M <- results$M[i]
   u_tau_max <- results$u_tau_max[i]
   u_nu_max <- results$u_nu_max[i]
-  
-  sample_sizes <- rep(fixed_sample_size, M)
+  meta.analysis.method <- results$meta.analysis.method[i]
   
   data <- simulate.multi.study.surrogates(
     epsilon = epsilon,
@@ -51,7 +53,7 @@ for (i in seq_len(nrow(results))) {
       alpha = alpha,
       alternative = "two.sided",
       test = "knha",
-      meta.analysis.method = "FE"
+      meta.analysis.method = meta.analysis.method
     )
     p_vals[j] <- resj$results$p
   }
@@ -60,7 +62,7 @@ for (i in seq_len(nrow(results))) {
 }
 
 
-saveRDS(results, file = fs::path(simulation_results_folder, "simulation_1_calibration.rds"))
+saveRDS(results, file = fs::path(simulation_results_folder, "simulation_3_calibration_FE_RE.rds"))
 
 p1 <- ggplot(results, aes(
   x = factor(u_tau_max, levels = sort(unique(u_tau_max))),
@@ -70,42 +72,45 @@ p1 <- ggplot(results, aes(
 )) +
   geom_line(size = 1.2, alpha = 0.65) +
   geom_point(size = 3, alpha = 0.65) +
-  facet_wrap( ~ M, labeller = labeller(
-    M = function(x)
-      paste("N trials =", x)
-  )) +
-  scale_color_manual(values = scales::viridis_pal(option = "D")(length(unique(results$u_nu_max))),
-                     name = "Max within-study variance") +
-  ylim(0, 0.2) +
+  facet_wrap(
+    ~ meta.analysis.method,
+    labeller = labeller(meta.analysis.method = function(x) paste("Meta-analysis method:", x))
+  ) +
+  scale_color_manual(
+    values = scales::viridis_pal(option = "D")(length(unique(results$u_nu_max))),
+    name = "Max within-study variance"
+  ) +
+  ylim(0, 1) +
   geom_hline(
     yintercept = alpha,
     linetype = "dashed",
     color = "black",
     alpha = 0.7
   ) +
-  labs(x = "Maximum between-trial variance", y = "False Positive Rate", title = "Calibration - false positive rate across different settings") +
+  labs(
+    x = "Maximum between-trial variance",
+    y = "False Positive Rate",
+    title = "Calibration - false positive rate across meta-analysis method (N trials = 5)"
+  ) +
   theme_minimal(base_size = 20) +
   theme(
-    plot.title = element_text(size = 30, hjust = 0.5),
+    plot.title = element_text(size = 26, hjust = 0.5),
     panel.spacing = unit(5, "lines"),
-    # wider separation between facets
     strip.background = element_rect(fill = "#f0f0f0", color = "black"),
-    # gray background for facet labels
     strip.text = element_text(face = "bold", size = 16),
-    # bold facet text
     axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "right"                                     # move legend to the right
+    legend.position = "right"
   )
 
 p1
 
-# ggsave(
-#   filename = "calibration_lineplot.pdf",
-#   path = simulation_figures_folder,
-#   plot = p1,
-#   width = 40,
-#   height = 18,
-#   units = "cm"
-# )
+ggsave(
+  filename = "calibration_lineplot_FE_RE.pdf",
+  path = simulation_figures_folder,
+  plot = p1,
+  width = 45,
+  height = 18,
+  units = "cm"
+)
 
-rm(list = ls())
+# rm(list = ls())

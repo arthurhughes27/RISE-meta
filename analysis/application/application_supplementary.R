@@ -120,7 +120,7 @@ make_screening_forest_plot <- function(
     x_breaks = seq(-1, 1, by = 0.25)
 ) {
   df_plot <- screening_metrics %>%
-    arrange(p.adjusted) %>%
+    arrange(p.unadjusted) %>%
     slice_head(n = top_N) %>%
     mutate(
       marker = factor(marker, levels = rev(unique(marker))),
@@ -171,7 +171,7 @@ make_screening_forest_plot <- function(
     labs(
       x = expression("Pooled effect " ~ mu[delta]),
       y = NULL,
-      title = glue::glue("Screening results: Top {top_N} markers by adjusted p-value")
+      title = glue::glue("Screening results: Top {top_N} markers by raw p-value")
     ) +
     scale_x_continuous(limits = x_limits, breaks = x_breaks) +
     theme_minimal(base_size = 20) +
@@ -227,7 +227,8 @@ run_screen <- function(inputs, p_correction = "BH") {
     show.pooled.effect           = TRUE,
     return.study.similarity.plot = FALSE,
     test = "knha",
-    meta.analysis.method = meta.analysis.method
+    meta.analysis.method = meta.analysis.method,
+    n.cores = 5
   )
 }
 

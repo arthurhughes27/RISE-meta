@@ -77,8 +77,8 @@ rise_fit <- rise.screen.meta(
 
 ccc = rise_fit[["evaluation.metrics.meta"]][["ccc"]]
 plot_rise = rise_fit$gamma.s.plot$fit.plot
-plot_rise_forest = rise_fit$gamma.s.plot$forest.plot
-plot_rise_forest
+# plot_rise_forest = rise_fit$gamma.s.plot$forest.plot
+# plot_rise_forest
 
 # -------------------------------------------------------------------
 # 4) Molenberghs / Buyse trial-level model
@@ -115,7 +115,7 @@ r2_trial <- trial_fit[["Trial.R2"]][["R2 Trial"]]
 # -------------------------------------------------------------------
 # 5) Quick outputs
 # -------------------------------------------------------------------
-plot_rise
+print(plot_rise)
 plot.TrialLevelMA(trial_fit)
 
 ccc
