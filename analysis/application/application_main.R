@@ -1,130 +1,136 @@
-# Meta-analysis with RISE: application to HIPC influenza vaccine data
+# Script to run the main analysis for the paper : Meta-Analytic Evaluation of High-Dimensional Surrogate Markers : Application to vaccinology
+
+
+# Define global hyperparameters for analysis
+hyperparameter_list = list(
+  # Hyperparameters for data pre-processing
+  tp = 1,
+  # Timepoint for gene expression
+  screen.fraction = 0.66,
+  # Fraction of data for screening
+  seed = 08012025,
+  # seed for random data splitting
+  
+  # Hyperparameters to define methodology
+  meta.analysis.method = "RE",
+  # meta analysis method (random or fixed effects)
+  test = "knha",
+  # method for variance estimation of pooled effect
+  alternative = "two.sided",
+  # form of alternative hypothesis
+  epsilon.meta.mode = "user",
+  # choice of how to define epsilon
+  paired.all = TRUE,
+  # paired mode
+  paired.studies = NULL,
+  # which studies are paired
+  evaluate.weights = TRUE, 
+  # Whether to use weighting for evaluation stage
+  
+  # Numeric hyperparameters for testing procedure
+  alpha = 0.05,
+  # significance level
+  power.want.s.study = NULL,
+  # within-study power for epsilon
+  epsilon.meta = 0.2,
+  # fixed value for epsilon
+  epsilon.study = 0.2,
+  # epsilon for within-study testing
+  p.correction = "BH",
+  # multiplicity correction for p-values
+  u.y.hyp = NULL,
+  # hypothesised effect size on y
+  weight.mode = "diff.epsilon",
+  # How to weight surrogates in combination
+  normalise.weights = TRUE,
+  # normalise weights for the combination
+  
+  # Hyperparameters to define which objects to return
+  return.all.screen = TRUE,
+  # returns all screening results
+  show.pooled.effect = TRUE,
+  # show pooled effect in forest plot?
+  return.study.similarity.plot = FALSE,
+  # return similarity of within-study analyses plot
+  return.forest.plot = TRUE,
+  # return forest plot for combined marker
+  return.fit.plot = TRUE,
+  # return fit plot for combined marker
+  return.evaluate.results = TRUE,
+  # return evaluation results for screening data
+  return.screen.plot = TRUE, 
+  # return screening plot
+  return.all.weights = FALSE,
+  # return weights for all predictors
+  
+  # Predictor transformation parameters
+  aggregation_function = mean,
+  # Function defining aggregation from gene to geneset level 
+  
+  
+  # Other hyperparameters
+  n.cores = 5,
+  # number of cores for parallel computing
+  screen.plot.topN = 15, # how many predictors to plot
+  
+  # Graphical parameters
+  screen.plot.width = 40,
+  screen.plot.height = 18,
+  forest.plot.width = 32,
+  forest.plot.height = 15,
+  fit.plot.width = 37,
+  fit.plot.height = 20
+)
+
+file_name_tag = paste0("_timepoint",
+                       hyperparameter_list$tp,
+                       "_method",
+                       hyperparameter_list$meta.analysis.method,
+                       "_test",
+                       hyperparameter_list$test,
+                       "_epsMode",
+                       hyperparameter_list$epsilon.meta.mode,
+                       ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
+                          paste0("_eps", hyperparameter_list$epsilon.meta), 
+                          paste0("_power", hyperparameter_list$power.want.s.study)))
+
+
+# Libraries
 library(tidyverse)
 library(SurrogateRank)
-library(knitr)
-library(kableExtra)
 
-set.seed(08012025)
+# Load internal functions
+sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
 application_figures_folder <- fs::path("output", "figures", "application")
 
 # Load merged gene expression and BTM gene set objects
-hipc_merged_all_noNorm <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
+df <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
 BTM <- readRDS(fs::path(processed_data_folder, "BTM_processed.rds"))
 
-# Gene columns present in the data with no missing values
-gene_names <- hipc_merged_all_noNorm %>%
-  select(a1cf:zzz3) %>%
-  select(where( ~ !any(is.na(.)))) %>%
+preprocessed_data_list = preprocess_data(
+  df = df,
+  tp = hyperparameter_list$tp,
+  screen.fraction = hyperparameter_list$screen.fraction,
+  seed = hyperparameter_list$seed
+)
+
+df_train = preprocessed_data_list[["df.screen"]]
+df_test = preprocessed_data_list[["df.evaluate"]]
+
+predictor_names = df_train %>% 
+  dplyr::select(a1cf:zzz3) %>% 
   colnames()
-
-# Day 1 post-vaccination; timepoints_to_keep includes baseline (day 0)
-tp <- 1
-timepoints_to_keep <- c(0, tp)
-
-# Meta-analysis method
-meta.analysis.method = "RE"
-
-# nAb studies use a different response variable than HAI studies
-nab_studies <- c("SDY80", "SDY180", "SDY1276", "SDY67")
-
-# Build a unified pre/post response column, then filter to influenza participants
-# with exactly one baseline and one post-vaccination measurement per person,
-# and drop studies with fewer than 3 participants
-hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
-  mutate(
-    response_pre = ifelse(
-      study_accession %in% nab_studies,
-      immResp_mean_nAb_pre_value,
-      immResp_mean_hai_pre_value
-    ),
-    response_post = ifelse(
-      study_accession %in% nab_studies,
-      immResp_mean_nAb_post_value,
-      immResp_mean_hai_post_value
-    )
-  ) %>%
-  filter(
-    !is.na(immResp_MFC_anyAssay_log2_MFC),
-    vaccine_name == "Influenza (IN)",
-    study_time_collected %in% timepoints_to_keep
-  ) %>%
-  group_by(participant_id) %>%
-  filter(sum(study_time_collected == 0) == 1,
-         sum(study_time_collected == tp) == 1) %>%
-  ungroup() %>%
-  group_by(study_accession) %>%
-  filter(length(unique(participant_id)) > 2) %>%
-  ungroup() %>%
-  select(
-    participant_id,
-    age_imputed,
-    gender,
-    race,
-    study_accession,
-    study_time_collected,
-    response_pre,
-    response_post,
-    all_of(gene_names)
-  ) %>%
-  arrange(participant_id)
-
-# Sample 66% of participants per study for training; remainder becomes test set
-train_indices <- hipc_merged_all_noNorm_filtered %>%
-  distinct(study_accession, participant_id) %>%
-  group_by(study_accession) %>%
-  slice_sample(prop = 0.66) %>%
-  ungroup()
-
-df_train <- hipc_merged_all_noNorm_filtered %>%
-  semi_join(train_indices, by = c("study_accession", "participant_id"))
-
-df_test <- hipc_merged_all_noNorm_filtered %>%
-  anti_join(train_indices, by = c("study_accession", "participant_id"))
-
-# BTM gene sets and their names (excluding top-level aggregates)
-btm_filter <- which(BTM[["geneset.aggregates"]] != "NA")
-BTM_genes <- BTM[["genesets"]][btm_filter] %>% unlist()
-BTM_genes_names <- BTM[["geneset.names.descriptions"]][btm_filter]
-
-# Summarise gene expression within each BTM gene set by applying FUN row-wise
-aggregate_to_geneset <- function(df, genesets, geneset_names, FUN = mean) {
-  df <- as.data.frame(df)
-  out <- imap_dfc(genesets, function(genes, i) {
-    present <- intersect(genes, colnames(df))
-    if (length(present) == 0)
-      return(NULL)
-    mat <- df[, present, drop = FALSE]
-    vec <- apply(mat, 1, function(r)
-      FUN(r, na.rm = TRUE))
-    # Replace NaN (all-NA rows) with proper NA
-    vec[is.nan(vec)] <- NA_real_
-    tibble::tibble(!!geneset_names[i] := vec)
-  })
-  as.data.frame(out)
-}
-
-# Extract RISE inputs (response vectors, gene-set matrices, study labels)
-# from a data frame containing both baseline and post-vaccination rows
-extract_rise_inputs <- function(df) {
-  sone_raw  <- df %>% filter(study_time_collected > 0)  %>% select(any_of(BTM_genes))
-  szero_raw <- df %>% filter(study_time_collected == 0) %>% select(any_of(BTM_genes))
-  
-  list(
-    yone      = df %>% filter(study_time_collected > 0)  %>% pull(response_post),
-    yzero     = df %>% filter(study_time_collected == 0) %>% pull(response_pre),
-    sone      = aggregate_to_geneset(sone_raw, BTM[["genesets"]][btm_filter], BTM_genes_names),
-    szero     = aggregate_to_geneset(szero_raw, BTM[["genesets"]][btm_filter], BTM_genes_names),
-    studyone  = df %>% filter(study_time_collected > 0)  %>% pull(study_accession),
-    studyzero = df %>% filter(study_time_collected == 0) %>% pull(study_accession)
-  )
-}
 
 # ----- Screening on training data -----
 
-train_inputs <- extract_rise_inputs(df_train)
+train_inputs <- extract_rise_inputs(df_train, 
+                                    predictor_names = predictor_names, 
+                                    genesets = BTM[["genesets"]], 
+                                    geneset_names = BTM[["geneset.names.descriptions"]],
+                                    aggregation_function = hyperparameter_list$aggregation_function)
 
 # Screen for surrogate markers across studies using BH-corrected meta-analysis
 rise_screen_result <- rise.screen.meta(
@@ -134,120 +140,134 @@ rise_screen_result <- rise.screen.meta(
   szero                        = train_inputs$szero,
   studyone                     = train_inputs$studyone,
   studyzero                    = train_inputs$studyzero,
-  alpha                        = 0.05,
-  epsilon.meta.mode            = "user",
-  power.want.s.study           = 0.8,
-  epsilon.meta                 = 0.2,
-  alternative                  = "two.sided",
-  paired.all                   = TRUE,
-  return.all.screen            = TRUE,
-  epsilon.study                = 0.2,
-  p.correction                 = "BH",
-  show.pooled.effect           = TRUE,
-  return.study.similarity.plot = FALSE,
-  test                         = "knha",
-  meta.analysis.method         = meta.analysis.method,
-  n.cores                      = 5
+  alpha                        = hyperparameter_list$alpha,
+  epsilon.meta.mode            = hyperparameter_list$epsilon.meta.mode,
+  power.want.s.study           = hyperparameter_list$power.want.s.study,
+  epsilon.meta                 = hyperparameter_list$epsilon.meta,
+  alternative                  = hyperparameter_list$alternative ,
+  paired.all                   = hyperparameter_list$paired.all,
+  return.all.screen            = hyperparameter_list$return.all.screen,
+  epsilon.study                = hyperparameter_list$epsilon.study,
+  p.correction                 = hyperparameter_list$p.correction,
+  show.pooled.effect           = hyperparameter_list$show.pooled.effect,
+  return.study.similarity.plot = hyperparameter_list$return.study.similarity.plot,
+  test                         = hyperparameter_list$test,
+  meta.analysis.method         = hyperparameter_list$meta.analysis.method,
+  n.cores                      = hyperparameter_list$n.cores,
+  screen.plot.topN             = hyperparameter_list$screen.plot.topN,
+  return.evaluate.results      = hyperparameter_list$return.evaluate.results,
+  return.fit.plot              = hyperparameter_list$return.fit.plot,
+  return.forest.plot           = hyperparameter_list$return.forest.plot, 
+  normalise.weights            = hyperparameter_list$normalise.weights, 
+  return.screen.plot           = hyperparameter_list$return.screen.plot, 
+  weight.mode                  = hyperparameter_list$weight.mode, 
+  return.all.weights           = hyperparameter_list$return.all.weights, 
+  paired.studies               = hyperparameter_list$paired.studies, 
+  u.y.hyp                      = hyperparameter_list$u.y.hyp
 )
 
-# Extract per-marker screening metrics from result
-screening_metrics <- rise_screen_result[["screening.metrics.meta"]]
+screen_output = extract_rise_outputs(screen_result = rise_screen_result)
 
-# Format significant markers into a publication-ready table
-screening_metrics_select <- screening_metrics %>%
-  arrange(p.unadjusted) %>%
-  mutate(mu.delta.ci = paste0(
-    round(mu.delta, 3),
-    " (",
-    round(ci.delta.lower, 3),
-    ", ",
-    round(ci.delta.upper, 3),
-    ")"
-  )) %>%
-  select(marker, mu.delta.ci, p.unadjusted, p.adjusted) %>%
-  filter(p.adjusted < 0.05)
+# LaTeX table formatting the significant results of the analysis 
+screen_output$screen_table
 
-# Render LaTeX table of significant screening markers
-kable(
-  screening_metrics_select,
-  format   = "latex",
-  booktabs = TRUE,
-  caption  = "Screening Metrics Table"
-) %>%
-  kable_styling(latex_options = "hold_position") %>%
-  row_spec(0, bold = TRUE) %>%
-  column_spec(1:ncol(screening_metrics_select))
+# Extract and show the graphics for the screening stage
+screen_plot_1 = screen_output$screen_plot
+screen_forest_1 = screen_output$screen_forest
+screen_fit_1 = screen_output$screen_fit
 
-# Forest plot and rank-correlation fit plot from screening
-p1 <- rise_screen_result[["gamma.s.plot"]]$forest.plot
-p1
+screen_plot_1
+screen_forest_1 
+screen_fit_1
 
-p2 <- rise_screen_result[["gamma.s.plot"]]$fit.plot
-p2
-
-p3 = rise_screen_result[["gamma.s.plot"]]$screen.plot
-p3
+# Save these graphics with an informative name
+ggsave(
+  filename = paste0("screen_plot", file_name_tag, ".pdf"),
+  path     = application_figures_folder,
+  plot     = screen_plot_1,
+  width    = hyperparameter_list$screen.plot.width,
+  height   = hyperparameter_list$screen.plot.height,
+  units    = "cm"
+)
 
 ggsave(
-  filename = paste0("TIV_d1_screening_", meta.analysis.method, ".pdf"),
+  filename = paste0("screen_forest", file_name_tag, ".pdf"),
   path     = application_figures_folder,
-  plot     = p3,
-  width    = 40,
-  height   = 18,
+  plot     = screen_forest_1,
+  width    = hyperparameter_list$forest.plot.width,
+  height   = hyperparameter_list$forest.plot.height,
+  units    = "cm"
+)
+
+ggsave(
+  filename = paste0("screen_fit", file_name_tag, ".pdf"),
+  path     = application_figures_folder,
+  plot     = screen_fit_1,
+  width    = hyperparameter_list$fit.plot.width,
+  height   = hyperparameter_list$fit.plot.height,
   units    = "cm"
 )
 
 # ----- Evaluation on test data -----
-
-test_inputs <- extract_rise_inputs(df_test)
+test_inputs <- extract_rise_inputs(df_test, 
+                                   predictor_names = predictor_names, 
+                                   genesets = BTM[["genesets"]], 
+                                   geneset_names = BTM[["geneset.names.descriptions"]],
+                                   aggregation_function = hyperparameter_list$aggregation_function)
 
 # Evaluate significant markers from screening on held-out test data
-rise_evaluate_result <- rise.evaluate.meta(
-  yone               = test_inputs$yone,
-  yzero              = test_inputs$yzero,
-  sone               = test_inputs$sone,
-  szero              = test_inputs$szero,
-  studyone           = test_inputs$studyone,
-  studyzero          = test_inputs$studyzero,
-  alpha              = 0.05,
-  epsilon.meta       = 0.2,
-  alternative        = "two.sided",
-  paired.all         = TRUE,
-  epsilon.study      = 0.2,
-  p.correction       = "none",
-  show.pooled.effect = TRUE,
-  screening.weights  = rise_screen_result[["screening.weights"]],
-  markers            = rise_screen_result[["significant.markers"]],
-  test               = "knha",
-  epsilon.meta.mode  = "user",
-  power.want.s.study = 0.8,
-  meta.analysis.method = meta.analysis.method
+rise_evaluation_result <- rise.evaluate.meta(
+  yone                 = test_inputs$yone,
+  yzero                = test_inputs$yzero,
+  sone                 = test_inputs$sone,
+  szero                = test_inputs$szero,
+  studyone             = test_inputs$studyone,
+  studyzero            = test_inputs$studyzero,
+  screening.weights    = rise_screen_result[["screening.weights"]],
+  markers              = rise_screen_result[["significant.markers"]],
+  alpha                = hyperparameter_list$alpha,
+  epsilon.meta         = hyperparameter_list$epsilon.meta,
+  alternative          = hyperparameter_list$alternative,
+  paired.all           = hyperparameter_list$paired.all,
+  epsilon.study        = hyperparameter_list$epsilon.study,
+  p.correction         = hyperparameter_list$p.correction,
+  show.pooled.effect   = hyperparameter_list$show.pooled.effect,
+  test                 = hyperparameter_list$test,
+  epsilon.meta.mode    = hyperparameter_list$epsilon.meta.mode,
+  power.want.s.study   = hyperparameter_list$power.want.s.study,
+  meta.analysis.method = hyperparameter_list$meta.analysis.method,return.fit.plot = ,return.all.evaluate = ,return.forest.plot = ,
+  weight.mode          = hyperparameter_list$weight.mode,
+  evaluate.weights     = hyperparameter_list$evaluate.weights,
+  paired.studies       = hyperparameter_list$paired.studies,
+  n.cores              = hyperparameter_list$n.cores,
+  u.y.hyp              = hyperparameter_list$u.y.hyp,
 )
 
-# Save evaluation forest plot
-p4 <- rise_evaluate_result[["gamma.s.plot"]]$forest.plot
+evaluation_output = extract_rise_outputs(evaluation_result = rise_evaluation_result)
 
-p4
+evaluation_output$evaluation_table
+
+# Extract and show the graphics for the screening stage
+evaluation_forest_1 = evaluation_output$evaluation_forest
+evaluation_fit_1 = evaluation_output$evaluation_fit
+
+evaluation_forest_1 
+evaluation_fit_1
 
 ggsave(
-  filename = paste0("TIV_evaluation_forest_", meta.analysis.method, ".pdf"),
+  filename = paste0("evaluation_forest", file_name_tag, ".pdf"),
   path     = application_figures_folder,
-  plot     = p4,
-  width    = 32,
-  height   = 15,
+  plot     = evaluation_forest_1,
+  width    = hyperparameter_list$forest.plot.width,
+  height   = hyperparameter_list$forest.plot.height,
   units    = "cm"
 )
 
-# Save evaluation rank-correlation fit plot
-p5 <- rise_evaluate_result[["gamma.s.plot"]]$fit.plot
-
-p5
-
 ggsave(
-  filename = paste0("TIV_evaluation_fitplot_", meta.analysis.method, ".pdf"),
+  filename = paste0("evaluation_fit", file_name_tag, ".pdf"),
   path     = application_figures_folder,
-  plot     = p5,
-  width    = 37,
-  height   = 20,
+  plot     = evaluation_fit_1,
+  width    = hyperparameter_list$fit.plot.width,
+  height   = hyperparameter_list$fit.plot.height,
   units    = "cm"
 )

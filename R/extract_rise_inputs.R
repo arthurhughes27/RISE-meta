@@ -1,0 +1,23 @@
+# Extract RISE inputs (response vectors, gene-set matrices, study labels)
+# from a data frame containing both baseline and post-vaccination rows
+extract_rise_inputs <- function(df, predictor_names, genesets, geneset_names, aggregation_function) {
+  sone_raw  <- df %>% filter(study_time_collected > 0)  %>% select(any_of(predictor_names))
+  szero_raw <- df %>% filter(study_time_collected == 0) %>% select(any_of(predictor_names))
+  yone      = df %>% filter(study_time_collected > 0)  %>% pull(response_post)
+  yzero     = df %>% filter(study_time_collected == 0) %>% pull(response_pre)
+  
+  sone = aggregate_to_geneset(sone_raw, genesets, geneset_names, FUN = aggregation_function)
+  szero = aggregate_to_geneset(szero_raw, genesets, geneset_names, FUN = aggregation_function)
+  
+  studyone  = df %>% filter(study_time_collected > 0)  %>% pull(study_accession)
+  studyzero = df %>% filter(study_time_collected == 0) %>% pull(study_accession)
+  
+  res = list("yone" = yone,
+             "yzero" = yzero,
+             "sone" = sone,
+             "szero" = szero,
+             "studyone" = studyone,
+             "studyzero" = studyzero)
+  
+  return(res)
+}

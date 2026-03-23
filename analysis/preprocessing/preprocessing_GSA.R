@@ -133,7 +133,21 @@ category_order <- c(
 BTM[["geneset.aggregates"]] <-
   factor(BTM[["geneset.aggregates"]], levels = category_order)
 
-BTM_processed = BTM
+# Remove TBA genesets
+btm_filter <- !grepl("TBA", BTM[["geneset.names.descriptions"]])
+BTM[["geneset.names.descriptions"]] <- BTM[["geneset.names.descriptions"]][btm_filter]
+BTM[["geneset.names"]] <- BTM[["geneset.names"]][btm_filter]
+BTM[["geneset.descriptions"]] <- BTM[["geneset.descriptions"]][btm_filter]
+BTM[["geneset.aggregates"]] <- BTM[["geneset.aggregates"]][btm_filter]
+BTM[["genesets"]] <- BTM[["genesets"]][btm_filter]
+
+# Remove NA genesets
+btm_filter <- !grepl("NA", BTM[["geneset.aggregates"]])
+BTM[["geneset.names.descriptions"]] <- BTM[["geneset.names.descriptions"]][btm_filter]
+BTM[["geneset.names"]] <- BTM[["geneset.names"]][btm_filter]
+BTM[["geneset.descriptions"]] <- BTM[["geneset.descriptions"]][btm_filter]
+BTM[["geneset.aggregates"]] <- BTM[["geneset.aggregates"]][btm_filter]
+BTM[["genesets"]] <- BTM[["genesets"]][btm_filter]
 
 # Save the processed geneset object
 
@@ -144,7 +158,6 @@ processed_data_folder = "data"
 p_save <- fs::path(processed_data_folder, "BTM_processed.rds")
 
 # Save dataframe
-saveRDS(BTM_processed, file = p_save)
-
+saveRDS(BTM, file = p_save)
 
 rm(list = ls())

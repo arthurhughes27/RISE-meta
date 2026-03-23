@@ -40,10 +40,26 @@ participant_id_all_noNorm <- matches_all_noNorm[, 2]
 study_time_collected_all_noNorm <- matches_all_noNorm[, 3] %>% 
   as.numeric() %>% 
   round(2)
+
 # Insert the identifying information as the first two columns 
 all_noNorm_expr <- all_noNorm_expr %>%
   mutate(participant_id = participant_id_all_noNorm, study_time_collected = study_time_collected_all_noNorm) %>%
   select(participant_id, study_time_collected, everything())
+
+# Where participants do not have day 0 measurement but do have day <0 measurement, use this instead
+all_noNorm_expr <- all_noNorm_expr %>%
+  group_by(participant_id) %>%
+  mutate(
+    has_zero = any(study_time_collected == 0, na.rm = TRUE),
+    study_time_collected = case_when(
+      study_time_collected < 0 & has_zero ~ NA_real_,
+      study_time_collected < 0 & !has_zero ~ 0,
+      TRUE ~ as.numeric(study_time_collected)
+    )
+  ) %>%
+  ungroup() %>%
+  filter(!is.na(study_time_collected)) %>%
+  select(-has_zero)
 
 # Save processed dataframes
 
