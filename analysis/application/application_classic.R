@@ -122,4 +122,4 @@ ccc
 r2_trial
 
 
-
+# rm(list = ls())

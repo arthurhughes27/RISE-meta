@@ -89,6 +89,14 @@ preprocess_data = function(df,
     
     df_test <- df_filtered %>%
       anti_join(train_indices, by = c("study_accession", "participant_id"))
+  } else if (screen.fraction == 1){
+    df_train <- df_filtered
+    
+    df_test = NULL
+  } else if (screen.fraction == 0){
+    df_train <- NULL
+    
+    df_test = df_filtered
   }
   
   res = list("df.full" = df_filtered,

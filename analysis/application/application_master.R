@@ -3,5 +3,6 @@
 source("analysis/application/application_main.R")
 
 # Supplementary scripts for sensitivity analysis
-source("analysis/application/application_supplementary_FE.R")
-source("analysis/application/application_supplementary_varEstim.R")
+source("analysis/application/application_supplementary_MetaAnalysisSpec.R")
+source("analysis/application/application_supplementary_epsilon.R")
+source("analysis/application/application_supplementary_geneset.R")

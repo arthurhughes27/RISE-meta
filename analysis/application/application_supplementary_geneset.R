@@ -1,4 +1,4 @@
-# Script to run supplementary application exploring the impact of the choice of epsilon
+# Script to run supplementary application using options the definition and aggregation to the geneset level
 
 
 # Define global hyperparameters for analysis
@@ -106,8 +106,8 @@ sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
-application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "epsilon")
-application_results_folder <- fs::path("output", "results", "application", "supplementary", "epsilon")
+application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "geneset")
+application_results_folder <- fs::path("output", "results", "application", "supplementary", "geneset")
 
 
 # Load merged gene expression and GS_list gene set objects
@@ -136,16 +136,33 @@ train_inputs <- extract_rise_inputs(df_train,
                                     geneset_names = GS_list[["geneset.names.descriptions"]],
                                     aggregation_function = hyperparameter_list$aggregation_function)
 
-# ----- Run screening for the four requested specifications -----
+# ----- Run screening for the six requested specifications -----
 spec_grid <- tibble::tribble(
-  ~epsilon.meta.mode, ~epsilon.meta, ~power.want.s.study,
-  "user",             0.1,          NA_real_,
-  "user",             0.2,          NA_real_,
-  "mean.power",       NA_real_,     0.8,
-  "mean.power",       NA_real_,     0.9
+  ~geneset_definition, ~aggregation_function_name,
+  "BTM",               "mean",
+  "BTM",               "median",
+  "BTM",               "max",
+  "BTM",               "none",
+  "BG3M",              "mean",
+  "BG3M",              "median",
+  "BG3M",              "max",
 )
 
-run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
+run_one_spec <- function(geneset_definition, aggregation_function_name) {
+  
+  aggregation_function <- if (aggregation_function_name == "none") {
+    "none"
+  } else {
+    match.fun(aggregation_function_name)
+  }
+  
+  GS_list <- readRDS(fs::path(processed_data_folder, paste0(geneset_definition, "_processed.rds")))
+  
+  train_inputs <- extract_rise_inputs(df_train, 
+                                      predictor_names = predictor_names, 
+                                      genesets = GS_list[["genesets"]], 
+                                      geneset_names = GS_list[["geneset.names.descriptions"]],
+                                      aggregation_function = aggregation_function)
   
   rise_screen_result <- rise.screen.meta(
     yone                         = train_inputs$yone,
@@ -155,10 +172,10 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
     studyone                     = train_inputs$studyone,
     studyzero                    = train_inputs$studyzero,
     alpha                        = hyperparameter_list$alpha,
-    epsilon.meta.mode            = epsilon.meta.mode,
-    power.want.s.study           = power.want.s.study,
-    epsilon.meta                 = epsilon.meta,
-    alternative                  = hyperparameter_list$alternative,
+    epsilon.meta.mode            = hyperparameter_list$epsilon.meta.mode,
+    power.want.s.study           = hyperparameter_list$power.want.s.study,
+    epsilon.meta                 = hyperparameter_list$epsilon.meta,
+    alternative                  = hyperparameter_list$alternative ,
     paired.all                   = hyperparameter_list$paired.all,
     return.all.screen            = hyperparameter_list$return.all.screen,
     epsilon.study                = hyperparameter_list$epsilon.study,
@@ -184,15 +201,19 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
   
   file_name_tag_spec = paste0("_timepoint",
                               hyperparameter_list$tp,
+                              "_geneset",
+                              geneset_definition,
+                              "_agg",
+                              aggregation_function_name,
                               "_method",
                               hyperparameter_list$meta.analysis.method,
                               "_test",
                               hyperparameter_list$test,
                               "_epsMode",
-                              epsilon.meta.mode,
-                              ifelse(epsilon.meta.mode == "user", 
-                                     paste0("_eps", epsilon.meta), 
-                                     paste0("_power", power.want.s.study)))
+                              hyperparameter_list$epsilon.meta.mode,
+                              ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
+                                     paste0("_eps", hyperparameter_list$epsilon.meta), 
+                                     paste0("_power", hyperparameter_list$power.want.s.study)))
   
   screen_plot_1 = screen_output$screen_plot
   screen_forest_1 = screen_output$screen_forest
@@ -232,16 +253,14 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
   }
   
   tibble::tibble(
-    epsilon.meta.mode = epsilon.meta.mode,
-    epsilon.meta = epsilon.meta,
-    epsilon.used = screen_output$epsilon,
-    power.want.s.study = power.want.s.study,
+    geneset_definition = geneset_definition,
+    aggregation_function = aggregation_function_name,
     n_significant = screen_output$n_significant
   )
 }
 
 results_df <- purrr::pmap_dfr(spec_grid, run_one_spec)
 
-results_df
+results_df 
 
 rm(list = ls())

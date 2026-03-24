@@ -1,4 +1,4 @@
-# Script to run supplementary application exploring the impact of the choice of epsilon
+# Script to run supplementary application using options for the meta-analyis model (fixed or random effects, and variance estimation using HK or conventional)
 
 
 # Define global hyperparameters for analysis
@@ -106,8 +106,8 @@ sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
-application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "epsilon")
-application_results_folder <- fs::path("output", "results", "application", "supplementary", "epsilon")
+application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "MetaAnalysisSpec")
+application_results_folder <- fs::path("output", "results", "application", "supplementary", "MetaAnalysisSpec")
 
 
 # Load merged gene expression and GS_list gene set objects
@@ -136,16 +136,17 @@ train_inputs <- extract_rise_inputs(df_train,
                                     geneset_names = GS_list[["geneset.names.descriptions"]],
                                     aggregation_function = hyperparameter_list$aggregation_function)
 
-# ----- Run screening for the four requested specifications -----
+# ----- Run screening for the three requested specifications -----
 spec_grid <- tibble::tribble(
-  ~epsilon.meta.mode, ~epsilon.meta, ~power.want.s.study,
-  "user",             0.1,          NA_real_,
-  "user",             0.2,          NA_real_,
-  "mean.power",       NA_real_,     0.8,
-  "mean.power",       NA_real_,     0.9
+  ~meta.analysis.method, ~test,
+  "RE",                  "knha",
+  "RE",                  "z",
+  "FE",                  "z"
 )
 
-run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
+run_one_spec <- function(meta.analysis.method, test) {
+  
+  test_to_use <- if (meta.analysis.method == "FE") "z" else test
   
   rise_screen_result <- rise.screen.meta(
     yone                         = train_inputs$yone,
@@ -155,18 +156,18 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
     studyone                     = train_inputs$studyone,
     studyzero                    = train_inputs$studyzero,
     alpha                        = hyperparameter_list$alpha,
-    epsilon.meta.mode            = epsilon.meta.mode,
-    power.want.s.study           = power.want.s.study,
-    epsilon.meta                 = epsilon.meta,
-    alternative                  = hyperparameter_list$alternative,
+    epsilon.meta.mode            = hyperparameter_list$epsilon.meta.mode,
+    power.want.s.study           = hyperparameter_list$power.want.s.study,
+    epsilon.meta                 = hyperparameter_list$epsilon.meta,
+    alternative                  = hyperparameter_list$alternative ,
     paired.all                   = hyperparameter_list$paired.all,
     return.all.screen            = hyperparameter_list$return.all.screen,
     epsilon.study                = hyperparameter_list$epsilon.study,
     p.correction                 = hyperparameter_list$p.correction,
     show.pooled.effect           = hyperparameter_list$show.pooled.effect,
     return.study.similarity.plot = hyperparameter_list$return.study.similarity.plot,
-    test                         = hyperparameter_list$test,
-    meta.analysis.method         = hyperparameter_list$meta.analysis.method,
+    test                         = test_to_use,
+    meta.analysis.method         = meta.analysis.method,
     n.cores                      = hyperparameter_list$n.cores,
     screen.plot.topN             = hyperparameter_list$screen.plot.topN,
     return.evaluate.results      = hyperparameter_list$return.evaluate.results,
@@ -185,14 +186,14 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
   file_name_tag_spec = paste0("_timepoint",
                               hyperparameter_list$tp,
                               "_method",
-                              hyperparameter_list$meta.analysis.method,
+                              meta.analysis.method,
                               "_test",
-                              hyperparameter_list$test,
+                              ifelse(meta.analysis.method == "FE", "NA", test_to_use),
                               "_epsMode",
-                              epsilon.meta.mode,
-                              ifelse(epsilon.meta.mode == "user", 
-                                     paste0("_eps", epsilon.meta), 
-                                     paste0("_power", power.want.s.study)))
+                              hyperparameter_list$epsilon.meta.mode,
+                              ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
+                                     paste0("_eps", hyperparameter_list$epsilon.meta), 
+                                     paste0("_power", hyperparameter_list$power.want.s.study)))
   
   screen_plot_1 = screen_output$screen_plot
   screen_forest_1 = screen_output$screen_forest
@@ -232,10 +233,8 @@ run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
   }
   
   tibble::tibble(
-    epsilon.meta.mode = epsilon.meta.mode,
-    epsilon.meta = epsilon.meta,
-    epsilon.used = screen_output$epsilon,
-    power.want.s.study = power.want.s.study,
+    meta.analysis.method = meta.analysis.method,
+    test = if (meta.analysis.method == "FE") NA_character_ else test_to_use,
     n_significant = screen_output$n_significant
   )
 }

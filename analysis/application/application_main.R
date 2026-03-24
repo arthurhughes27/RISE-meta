@@ -66,6 +66,8 @@ hyperparameter_list = list(
   # Predictor transformation parameters
   aggregation_function = mean,
   # Function defining aggregation from gene to geneset level 
+  geneset_definition = "BTM",
+  # Argument stating the definition of the genesets (options are BTM or BG3M)
   
   
   # Other hyperparameters
@@ -104,11 +106,11 @@ sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
-application_figures_folder <- fs::path("output", "figures", "application")
+application_figures_folder <- fs::path("output", "figures", "application", "main")
 
-# Load merged gene expression and BTM gene set objects
+# Load merged gene expression and GS_list gene set objects
 df <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
-BTM <- readRDS(fs::path(processed_data_folder, "BTM_processed.rds"))
+GS_list <- readRDS(fs::path(processed_data_folder, paste0(hyperparameter_list$geneset_definition, "_processed.rds")))
 
 preprocessed_data_list = preprocess_data(
   df = df,
@@ -126,10 +128,10 @@ predictor_names = df_train %>%
 
 # ----- Screening on training data -----
 
-train_inputs <- extract_rise_inputs(df_train, 
+train_inputs <- extract_rise_inputs(df = df_train, 
                                     predictor_names = predictor_names, 
-                                    genesets = BTM[["genesets"]], 
-                                    geneset_names = BTM[["geneset.names.descriptions"]],
+                                    genesets = GS_list[["genesets"]], 
+                                    geneset_names = GS_list[["geneset.names.descriptions"]],
                                     aggregation_function = hyperparameter_list$aggregation_function)
 
 # Screen for surrogate markers across studies using BH-corrected meta-analysis
@@ -211,8 +213,8 @@ ggsave(
 # ----- Evaluation on test data -----
 test_inputs <- extract_rise_inputs(df_test, 
                                    predictor_names = predictor_names, 
-                                   genesets = BTM[["genesets"]], 
-                                   geneset_names = BTM[["geneset.names.descriptions"]],
+                                   genesets = GS_list[["genesets"]], 
+                                   geneset_names = GS_list[["geneset.names.descriptions"]],
                                    aggregation_function = hyperparameter_list$aggregation_function)
 
 # Evaluate significant markers from screening on held-out test data
@@ -271,3 +273,5 @@ ggsave(
   height   = hyperparameter_list$fit.plot.height,
   units    = "cm"
 )
+
+rm(list = ls())

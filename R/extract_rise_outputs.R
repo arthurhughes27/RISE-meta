@@ -8,6 +8,10 @@ extract_rise_outputs = function(screen_result = NULL,
     # Extract per-marker screening metrics from result
     screening_metrics <- screen_result[["screening.metrics.meta"]]
     
+    n_significant = length(screen_result[["significant.markers"]])
+    
+    epsilon = screen_result[["evaluation.metrics.meta"]][["epsilon"]]
+    
     # Format significant markers into a publication-ready table
     screening_metrics_select <- screening_metrics %>%
       arrange(p.unadjusted) %>%
@@ -41,6 +45,8 @@ extract_rise_outputs = function(screen_result = NULL,
     screen_plot = screen_result[["gamma.s.plot"]]$screen.plot
     
     res = list(
+      "n_significant" = n_significant,
+      "epsilon" = epsilon,
       "screen_table" = screen_table,
       "screen_plot" = screen_plot,
       "screen_forest" = forest_plot,
