@@ -99,7 +99,8 @@ Centerzero <- as.character(dat$Center[dat$Treat == -1])
 rise_fit <- rise.screen.meta(
   yone = yone, yzero = yzero, sone = sone, szero = szero,
   studyone = Centerone, studyzero = Centerzero,
-  alpha = 0.05, epsilon.study = 0.2, epsilon.meta = 0.2,
+  alpha = 0.05, 
+  epsilon.study = 0.2, epsilon.meta = 0.2,
   p.correction = "none", return.study.similarity.plot = FALSE,
   paired.all = FALSE, test = "knha", meta.analysis.method = "RE"
 )

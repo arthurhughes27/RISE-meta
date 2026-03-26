@@ -51,7 +51,7 @@ for (i in seq_len(nrow(results))) {
       alpha = alpha,
       alternative = "two.sided",
       test = "knha",
-      meta.analysis.method = "FE"
+      meta.analysis.method = "RE"
     )
     p_vals[j] <- resj$results$p
   }
@@ -99,13 +99,13 @@ p1 <- ggplot(results, aes(
 
 p1
 
-# ggsave(
-#   filename = "calibration_lineplot.pdf",
-#   path = simulation_figures_folder,
-#   plot = p1,
-#   width = 40,
-#   height = 18,
-#   units = "cm"
-# )
+ggsave(
+  filename = "calibration_lineplot.pdf",
+  path = simulation_figures_folder,
+  plot = p1,
+  width = 40,
+  height = 18,
+  units = "cm"
+)
 
 rm(list = ls())

@@ -10,7 +10,7 @@ extract_rise_outputs = function(screen_result = NULL,
     
     n_significant = length(screen_result[["significant.markers"]])
     
-    epsilon = screen_result[["evaluation.metrics.meta"]][["epsilon"]]
+    epsilon = mean(screen_result[["screening.metrics.study"]][["epsilon"]])
     
     # Format significant markers into a publication-ready table
     screening_metrics_select <- screening_metrics %>%

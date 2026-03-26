@@ -8,7 +8,7 @@ hyperparameter_list = list(
   # Timepoint for gene expression
   screen.fraction = 0.66,
   # Fraction of data for screening
-  seed = 08012025,
+  seed = 10012025,
   # seed for random data splitting
   
   # Hyperparameters to define methodology
@@ -179,7 +179,7 @@ screen_forest_1 = screen_output$screen_forest
 screen_fit_1 = screen_output$screen_fit
 
 screen_plot_1
-screen_forest_1 
+screen_forest_1
 screen_fit_1
 
 # Save these graphics with an informative name
@@ -211,9 +211,9 @@ ggsave(
 )
 
 # ----- Evaluation on test data -----
-test_inputs <- extract_rise_inputs(df_test, 
-                                   predictor_names = predictor_names, 
-                                   genesets = GS_list[["genesets"]], 
+test_inputs <- extract_rise_inputs(df_test,
+                                   predictor_names = predictor_names,
+                                   genesets = GS_list[["genesets"]],
                                    geneset_names = GS_list[["geneset.names.descriptions"]],
                                    aggregation_function = hyperparameter_list$aggregation_function)
 
@@ -253,7 +253,7 @@ evaluation_output$evaluation_table
 evaluation_forest_1 = evaluation_output$evaluation_forest
 evaluation_fit_1 = evaluation_output$evaluation_fit
 
-evaluation_forest_1 
+evaluation_forest_1
 evaluation_fit_1
 
 ggsave(
@@ -274,4 +274,4 @@ ggsave(
   units    = "cm"
 )
 
-rm(list = ls())
+# rm(list = ls())

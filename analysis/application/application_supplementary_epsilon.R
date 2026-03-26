@@ -18,7 +18,7 @@ hyperparameter_list = list(
   # method for variance estimation of pooled effect
   alternative = "two.sided",
   # form of alternative hypothesis
-  epsilon.meta.mode = "user",
+  epsilon.meta.mode = "mean.power",
   # choice of how to define epsilon
   paired.all = TRUE,
   # paired mode
@@ -30,11 +30,11 @@ hyperparameter_list = list(
   # Numeric hyperparameters for testing procedure
   alpha = 0.05,
   # significance level
-  power.want.s.study = NULL,
+  power.want.s.study = 0.8,
   # within-study power for epsilon
-  epsilon.meta = 0.2,
+  epsilon.meta = NULL,
   # fixed value for epsilon
-  epsilon.study = 0.2,
+  epsilon.study = NULL,
   # epsilon for within-study testing
   p.correction = "BH",
   # multiplicity correction for p-values
@@ -146,6 +146,10 @@ spec_grid <- tibble::tribble(
 )
 
 run_one_spec <- function(epsilon.meta.mode, epsilon.meta, power.want.s.study) {
+  
+  if (length(power.want.s.study) == 1 && is.na(power.want.s.study)) {
+    power.want.s.study <- NULL
+  }
   
   rise_screen_result <- rise.screen.meta(
     yone                         = train_inputs$yone,
