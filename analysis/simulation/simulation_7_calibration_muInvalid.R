@@ -12,13 +12,13 @@ J <- 10000
 epsilon <- 0.1
 
 # Define a grid of nominal significance levels
-alpha_grid <- c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2)
+alpha_grid <- c(0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.2)
 
-Ms <- c(50)
+Ms <- c(25)
 tau_max_vals <- c(epsilon)
-nu_max_vals <- c(epsilon)
+nu_max_vals <- c(epsilon/10)
 fixed_sample_size <- 100
-abs_mu_invalid_grid <- seq(epsilon, 0.2, 0.02)
+abs_mu_invalid_grid <- c(seq(epsilon, 0.2, 0.02), 0.3)
 
 # Expand results for all alpha values
 results <- expand.grid(
@@ -83,14 +83,16 @@ saveRDS(results, file = fs::path(simulation_results_folder, "simulation_7_calibr
 abs_mu_vals <- sort(unique(results_long$abs_mu_invalid))
 n_colors <- length(abs_mu_vals)
 
-min_val <- min(alpha_grid)   # small positive value instead of 0
-max_val <- 1       # 100%
+min_val <- 1e-4
+max_val <- 1
 
-min_val <- 1e-4  # slightly smaller than smallest alpha
-max_val <- 0.2
+# custom percent labels: 0.0001 -> 0.01%, 0.2 -> 20%, 1 -> 100%
+fmt_percent <- function(x) {
+  lab <- scales::label_percent(accuracy = 0.01)(x)
+  sub("\\.?0+%$", "%", lab)
+}
 
 p1 <- ggplot(results_long, aes(x = nominal_alpha, y = observed_fpr, color = factor(abs_mu_invalid))) +
-  # Shaded grey region above the y = x line
   geom_ribbon(
     data = tibble(x = c(min_val, max_val)),
     aes(x = x, ymin = x, ymax = max_val),
@@ -98,17 +100,17 @@ p1 <- ggplot(results_long, aes(x = nominal_alpha, y = observed_fpr, color = fact
     fill = "grey80",
     alpha = 0.5
   ) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
+  geom_line(size = 1, alpha = 0.8) +
+  geom_point(size = 2, alpha = 0.6) +
   scale_x_log10(
     limits = c(min_val, max_val),
-    breaks = alpha_grid,
-    labels = scales::label_percent(accuracy = 0.01)
+    breaks = c(alpha_grid, max_val),
+    labels = fmt_percent
   ) +
   scale_y_log10(
     limits = c(min_val, max_val),
-    breaks = c(alpha_grid, 1),
-    labels = scales::label_percent(accuracy = 0.01)
+    breaks = c(alpha_grid, max_val),
+    labels = fmt_percent
   ) +
   scale_color_viridis(
     discrete = TRUE,
@@ -119,7 +121,7 @@ p1 <- ggplot(results_long, aes(x = nominal_alpha, y = observed_fpr, color = fact
   labs(
     x = "Nominal FPR",
     y = "Observed FPR",
-    color = expression(abs(mu[invalid]))
+    color = expression(abs(mu))
   ) +
   theme_minimal(base_size = 20) +
   theme(
@@ -133,7 +135,7 @@ ggsave(
   filename = "nominal_observed_mu.pdf",
   path = simulation_figures_folder,
   plot = p1,
-  width = 35,
+  width = 28,
   height = 18,
   units = "cm"
 )

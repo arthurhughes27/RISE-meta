@@ -4,12 +4,13 @@ library(tidyverse)
 simulation_figures_folder = fs::path("output", "figures", "simulation")
 simulation_results_folder = fs::path("output", "results", "simulation")
 
-J <- 10000
+J <- 1000
 M <- 5
 epsilon <- 0.1
 alpha <- 0.05
 
 tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
+tau_max_vals <- c(0, 0.00001, 0.0001, 0.001, 0.01)
 nu_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 method_vals <- c("RE", "FE")
 

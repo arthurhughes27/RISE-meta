@@ -76,7 +76,7 @@ p1 <- ggplot(results, aes(
   )) +
   scale_color_manual(values = scales::viridis_pal(option = "D")(length(unique(results$u_nu_max))),
                      name = "Max within-study variance") +
-  ylim(0, 0.2) +
+  ylim(0, 0.1) +
   geom_hline(
     yintercept = alpha,
     linetype = "dashed",
