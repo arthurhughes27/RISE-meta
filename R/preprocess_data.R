@@ -17,13 +17,14 @@ preprocess_data = function(df,
   
   # Define the studies to use neutralising antibody response
   nab_studies = df %>%
-    dplyr::select(study_accession, immResp_mean_nAb_pre_value) %>%
+    dplyr::select(study_accession, immResp_mean_nAb_pre_value, immResp_mean_hai_pre_value) %>%
+    # filter(is.na(immResp_mean_hai_pre_value)) %>% # uncomment to take HAI as priority
     filter(!is.na(immResp_mean_nAb_pre_value)) %>%
     pull(study_accession) %>%
     unique()
   
   # Filter only inactivated influenza vaccine participants
-  df_filtered <- df %>%
+  df_filtered <- df  %>%
     filter(vaccine_name == "Influenza (IN)")
   
   # Filter for only the timepoints we care about

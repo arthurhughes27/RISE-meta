@@ -1,6 +1,5 @@
 # Script to run the main analysis for the paper : Meta-Analytic Evaluation of High-Dimensional Surrogate Markers : Application to vaccinology
 
-
 # Define global hyperparameters for analysis
 hyperparameter_list = list(
   # Hyperparameters for data pre-processing
