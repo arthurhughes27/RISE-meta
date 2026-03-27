@@ -2,6 +2,7 @@ library(Surrogate)
 library(SurrogateRank)
 library(ggplot2)
 library(dplyr)
+library(patchwork)
 
 application_figures_folder <- fs::path("output", "figures", "application", "classic")
 

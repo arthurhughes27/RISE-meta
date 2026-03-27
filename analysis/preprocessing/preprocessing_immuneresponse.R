@@ -107,6 +107,30 @@ raw_response_influenzain = raw_response_influenzain %>%
   filter((study_time_collected < 36 &
             study_time_collected > 20) | study_time_collected <= 0)
 
+# 2) For each participant × response_strain_analyte × assay, keep one pre measurement:
+#    - choose the measurement closest to day 0
+#    - because all pre values are <= 0, the closest one is the largest study_time_collected
+response_pre <- raw_response_influenzain %>%
+  filter(study_time_collected <= 0) %>%
+  group_by(participant_id, response_strain_analyte, assay) %>%
+  slice_max(order_by = study_time_collected, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(study_time_collected = 0)
+
+# 3) For each participant × response_strain_analyte × assay, keep one post measurement:
+#    - choose the measurement closest to day 28
+#    - if there is a tie, this keeps the earlier timepoint because of the arrange() order
+response_post <- raw_response_influenzain %>%
+  filter(between(study_time_collected, 21, 35)) %>%
+  group_by(participant_id, response_strain_analyte, assay) %>%
+  arrange(abs(study_time_collected - 28), study_time_collected, .by_group = TRUE) %>%
+  slice_head(n = 1) %>%
+  ungroup() %>%
+  mutate(study_time_collected = 28)
+
+# 4) Combine the selected pre and post measurements
+raw_response_influenzain <- bind_rows(response_pre, response_post) %>%
+  arrange(participant_id, response_strain_analyte, assay, study_time_collected)
 
 # Now derive MFC values, taking most recent measurement as baseline in the case where there are two pre-vaccination measurements
 
