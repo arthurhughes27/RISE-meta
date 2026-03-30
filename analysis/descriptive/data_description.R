@@ -14,6 +14,7 @@ descriptive_figures_folder <- fs::path("output", "figures", "descriptive")
 
 # Load merged gene expression dataset
 hipc_merged_all_noNorm <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
+raw_response_influenzain = readRDS(fs::path(processed_data_folder, "raw_response_influenzain_all_noNorm.rds"))
 
 # Gene columns present in the data with no missing values
 gene_names <- hipc_merged_all_noNorm %>%
@@ -304,5 +305,161 @@ ggsave(
   plot     = p4,
   width    = 30,
   height   = 13,
+  units    = "cm"
+)
+
+
+
+
+
+
+# Bubble plot of antibody measurement availability
+
+plot_antibody_availability <- function(dat, assay_name) {
+  counts <- dat %>%
+    filter(assay == assay_name) %>%
+    filter(!is.na(study_time_collected)) %>%
+    filter(!is.na(value_preferred)) %>%
+    distinct(participant_id, study_accession, study_time_collected, response_strain_analyte) %>%
+    group_by(study_accession, study_time_collected) %>%
+    summarise(n = n_distinct(participant_id), .groups = "drop")
+  
+  time_levels <- counts %>%
+    distinct(study_time_collected) %>%
+    mutate(time_num = suppressWarnings(as.numeric(as.character(study_time_collected)))) %>%
+    arrange(
+      ifelse(is.na(time_num), Inf, time_num),
+      as.character(study_time_collected)
+    ) %>%
+    pull(study_time_collected) %>%
+    as.character()
+  
+  counts <- counts %>%
+    mutate(
+      study_time_collected = factor(as.character(study_time_collected),
+                                    levels = time_levels, ordered = TRUE),
+      study_accession = factor(study_accession,
+                               levels = rev(levels(factor(study_accession))))
+    )
+  
+  ggplot(counts, aes(x = study_time_collected, y = study_accession)) +
+    geom_point(
+      aes(size = n),
+      fill = "#5062FF",
+      shape = 21,
+      colour = "black",
+      alpha = 0.8,
+      show.legend = FALSE
+    ) +
+    geom_text(aes(label = n), colour = "white", size = 3.5, vjust = 0.5) +
+    scale_fill_identity(guide = "none") +
+    scale_size_area(max_size = 28, guide = "none") +
+    labs(
+      x = "Days post-vaccination",
+      y = "Study",
+      title = paste0("Availability of ", assay_name, " antibody measurements across time"),
+      subtitle = "Number of unique individuals with at least one non-missing value_preferred"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid.major.y = element_line(color = "grey90"),
+      panel.grid.minor   = element_blank(),
+      axis.title         = element_text(size = 17),
+      axis.text          = element_text(size = 15),
+      plot.title         = element_text(size = 20, hjust = 0.5, face = "bold"),
+      plot.subtitle      = element_text(size = 17, hjust = 0.5)
+    )
+}
+
+p5 <- plot_antibody_availability(raw_response_influenzain, "hai")
+p6 <- plot_antibody_availability(raw_response_influenzain, "nAb")
+
+p5
+p6
+
+ggsave(
+  filename = "hai_bubble_plot.pdf",
+  path     = descriptive_figures_folder,
+  plot     = p5,
+  width    = 30,
+  height   = 20,
+  units    = "cm"
+)
+
+ggsave(
+  filename = "nAb_bubble_plot.pdf",
+  path     = descriptive_figures_folder,
+  plot     = p6,
+  width    = 30,
+  height   = 20,
+  units    = "cm"
+)
+
+
+
+counts_combined <- raw_response_influenzain %>%
+  filter(assay %in% c("hai", "nAb")) %>%
+  filter(!is.na(study_time_collected)) %>%
+  filter(!is.na(value_preferred)) %>%
+  distinct(participant_id, study_accession, study_time_collected) %>%
+  group_by(study_accession, study_time_collected) %>%
+  summarise(n = n_distinct(participant_id), .groups = "drop")
+
+time_levels <- counts_combined %>%
+  distinct(study_time_collected) %>%
+  mutate(time_num = suppressWarnings(as.numeric(as.character(study_time_collected)))) %>%
+  arrange(ifelse(is.na(time_num), Inf, time_num), as.character(study_time_collected)) %>%
+  pull(study_time_collected) %>%
+  as.character()
+
+study_levels <- counts_combined %>%
+  distinct(study_accession) %>%
+  pull(study_accession) %>%
+  as.character()
+
+counts_combined <- counts_combined %>%
+  mutate(
+    study_time_collected = factor(as.character(study_time_collected),
+                                  levels = time_levels, ordered = TRUE),
+    study_accession = factor(as.character(study_accession),
+                             levels = rev(study_levels))
+  )
+
+p7 <- ggplot(counts_combined, aes(x = study_time_collected, y = study_accession)) +
+  geom_point(
+    aes(size = n),
+    fill = "#5062FF",
+    shape = 21,
+    colour = "black",
+    alpha = 0.8,
+    show.legend = FALSE
+  ) +
+  geom_text(aes(label = n), colour = "white", size = 3.5, vjust = 0.5) +
+  scale_fill_identity(guide = "none") +
+  scale_size_area(max_size = 28, guide = "none") +
+  labs(
+    x = "Days post-vaccination",
+    y = "Study",
+    title = "Availability of antibody measurements across time",
+    subtitle = "Unique participants with at least one non-missing measurement in either hai or nAb"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_line(color = "grey90"),
+    panel.grid.minor   = element_blank(),
+    axis.title         = element_text(size = 17),
+    axis.text          = element_text(size = 15),
+    plot.title         = element_text(size = 20, hjust = 0.5, face = "bold"),
+    plot.subtitle      = element_text(size = 17, hjust = 0.5)
+  )
+
+p7
+
+ggsave(
+  filename = "antibody_bubble_plot.pdf",
+  path     = descriptive_figures_folder,
+  plot     = p7,
+  width    = 30,
+  height   = 25,
   units    = "cm"
 )

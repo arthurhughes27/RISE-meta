@@ -39,6 +39,7 @@ hipc_clinical_all_noNorm = readRDS(p_load_clinical)
 # First, filter each dataframe to only contain information on participants for which we have gene expression data
 # Find identifiers of participants with gene expression measurements
 participants = hipc_clinical_all_noNorm %>%
+  filter(vaccine_name %in% c("Influenza (IN)", "Influenza (LV)")) %>% 
   pull(participant_id) %>%
   unique()
 
