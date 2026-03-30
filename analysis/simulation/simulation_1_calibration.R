@@ -4,13 +4,17 @@ library(tidyverse)
 simulation_figures_folder = fs::path("output", "figures", "simulation")
 simulation_results_folder = fs::path("output", "results", "simulation")
 
-J <- 10000
+J <- 1000
 epsilon <- 0.1
 alpha <- 0.05
 
 Ms <- c(3, 10, 25)
 tau_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
 nu_max_vals <- c(0.001, 0.01, 0.05, 0.1, 1, 5, 10)
+
+tau_max_vals <- c(epsilon/10, epsilon, epsilon*10)
+nu_max_vals <- c(epsilon/10, epsilon, epsilon*10)
+
 fixed_sample_size = 50
 
 results <- expand.grid(
