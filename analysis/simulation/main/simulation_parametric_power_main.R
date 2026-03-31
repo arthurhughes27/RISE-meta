@@ -11,11 +11,11 @@ library(tibble)
 library(scales)
 
 # Folder to store results and figures
-simulation_figures_folder = fs::path("output", "figures", "simulation")
-simulation_results_folder = fs::path("output", "results", "simulation")
+simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
+simulation_results_folder = fs::path("output", "results", "simulation", "main")
 
 # Number of independent markers to generate trial-level effects for
-J <- 1000
+J = 100
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -144,7 +144,7 @@ p1 <- ggplot(results_plot, aes(
     labels = fmt_percent
   ) +
   labs(
-    title = "Power vs significance level across number of studies and sample sizes",
+    title = "Empirical powervs significance level across number of studies and sample sizes",
     x = "Nominal FPR",
     y = "Power"
   ) +
@@ -235,7 +235,7 @@ p2 <- ggplot(results_plot2, aes(
     labels = fmt_percent
   ) +
   labs(
-    title = "Power vs significance level across between- and within-study variability",
+    title = "Empirical powervs significance level across between- and within-study variability",
     x = "Nominal FPR",
     y = "Observed FPR"
   ) +
@@ -362,7 +362,7 @@ p3 <- ggplot(results_plot3, aes(
   labs(
     x = expression(u[tau*","*max]),
     y = "Power",
-    title = "Power across number of studies and heterogeneity settings"
+    title = "Empirical poweracross number of studies and heterogeneity settings"
   ) +
   coord_cartesian(ylim = c(0, 1)) +
   theme_minimal(base_size = 20) +

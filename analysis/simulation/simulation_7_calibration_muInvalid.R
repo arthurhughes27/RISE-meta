@@ -8,15 +8,15 @@ library(viridis)
 simulation_figures_folder <- fs::path("output", "figures", "simulation")
 simulation_results_folder <- fs::path("output", "results", "simulation")
 
-J <- 10000
+J <- 1000
 epsilon <- 0.1
 
 # Define a grid of nominal significance levels
 alpha_grid <- c(0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.2)
 
 Ms <- c(25)
-tau_max_vals <- c(epsilon)
-nu_max_vals <- c(epsilon/10)
+tau_max_vals <- c(epsilon/10, epsilon, epsilon*10)
+nu_max_vals <- c(epsilon/10, epsilon, epsilon*10)
 fixed_sample_size <- 100
 abs_mu_invalid_grid <- c(seq(epsilon, 0.2, 0.02), 0.3)
 

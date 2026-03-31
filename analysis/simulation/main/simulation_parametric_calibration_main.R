@@ -11,11 +11,11 @@ library(tibble)
 library(scales)
 
 # Folder to store results and figures
-simulation_figures_folder = fs::path("output", "figures", "simulation")
-simulation_results_folder = fs::path("output", "results", "simulation")
+simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
+simulation_results_folder = fs::path("output", "results", "simulation", "main")
 
 # Number of independent markers to generate trial-level effects for
-J <- 100000
+J = 100
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
