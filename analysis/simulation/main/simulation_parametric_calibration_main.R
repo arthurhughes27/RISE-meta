@@ -15,7 +15,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
 simulation_results_folder = fs::path("output", "results", "simulation", "main")
 
 # Number of independent markers to generate trial-level effects for
-J = 100
+J = 10000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -290,4 +290,4 @@ ggsave(
   units = "cm"
 )
 
-# rm(list = ls())
+rm(list = ls())

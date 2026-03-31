@@ -15,7 +15,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
 simulation_results_folder = fs::path("output", "results", "simulation", "main")
 
 # Number of independent markers to generate trial-level effects for
-J = 100
+J = 10000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -362,7 +362,7 @@ p3 <- ggplot(results_plot3, aes(
   labs(
     x = expression(u[tau*","*max]),
     y = "Power",
-    title = "Empirical poweracross number of studies and heterogeneity settings"
+    title = "Empirical power across number of studies and heterogeneity settings"
   ) +
   coord_cartesian(ylim = c(0, 1)) +
   theme_minimal(base_size = 20) +
@@ -387,4 +387,4 @@ ggsave(
   units = "cm"
 )
 
-# rm(list = ls())
+rm(list = ls())
