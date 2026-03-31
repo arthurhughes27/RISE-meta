@@ -15,7 +15,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation")
 simulation_results_folder = fs::path("output", "results", "simulation")
 
 # Number of independent markers to generate trial-level effects for
-J <- 10000
+J <- 100000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -101,9 +101,14 @@ for (i in seq_len(nrow(results))) {
 # Extract results into a dataframe
 results <- bind_rows(results_list)
 
+# Save results
+saveRDS(results, file = fs::path(simulation_results_folder, "simulation_parametric_calibration_main.rds"))
+
+results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_calibration_main.rds"))
+
 # Plot 1: Grid of calibration plots for number of studies and sample sizes
-fixed_u_tau_max = epsilon
-fixed_u_nu_max = epsilon
+fixed_u_tau_max = epsilon/10
+fixed_u_nu_max = epsilon*100
 
 # Keep only the fixed heterogeneity setting
 results_plot <- results %>%
@@ -170,8 +175,8 @@ p1 <- ggplot(results_plot, aes(
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
     strip.text = element_text(face = "bold", size = 24),
-    plot.title = element_text(size = 40, hjust = 0.5),
-    axis.title = element_text(size = 24)
+    plot.title = element_text(size = 50, hjust = 0.5),
+    axis.title = element_text(size = 45)
   )
 
 p1
@@ -188,12 +193,12 @@ ggsave(
 
 # Plot 2: Grid of calibration plots for between- and within-study variability
 fixed_M  = 10
-fixed_nm = 50
+fixed_nm = 10
 
 tau_vals <- c(epsilon / 10, epsilon, epsilon * 10)
-nu_vals  <- c(epsilon / 100, epsilon, epsilon * 100)
+nu_vals  <- c(epsilon, epsilon * 10, epsilon * 100)
 
-# Keep only the fixed information setting and the selected heterogeneity values
+# Prepare data + create parsed labels
 results_plot2 <- results %>%
   filter(
     M == fixed_M,
@@ -202,8 +207,20 @@ results_plot2 <- results %>%
     u_nu_max %in% nu_vals
   ) %>%
   mutate(
-    u_tau_max = factor(u_tau_max, levels = tau_vals),
-    u_nu_max  = factor(u_nu_max, levels = nu_vals)
+    u_tau_lab = factor(
+      paste0("u[tau*','*max] == ", format(u_tau_max, scientific = TRUE)),
+      levels = paste0("u[tau*','*max] == ", format(tau_vals, scientific = TRUE))
+    ),
+    u_nu_lab = factor(
+      paste0(
+        "u[nu*','*max]/n == ",
+        format(u_nu_max / fixed_nm, scientific = TRUE)
+      ),
+      levels = paste0(
+        "u[nu*','*max]/n == ",
+        format(nu_vals / fixed_nm, scientific = TRUE)
+      )
+    )
   )
 
 # Define plotting limits
@@ -216,12 +233,12 @@ fmt_percent <- function(x) {
   sub("\\.?0+%$", "%", lab)
 }
 
+# Plot
 p2 <- ggplot(results_plot2, aes(
   x = alpha,
   y = fpr,
   group = 1
 )) +
-  # Shaded grey region above y=x
   geom_ribbon(
     data = tibble(x = c(min_val, max_val)),
     aes(x = x, ymin = x, ymax = max_val),
@@ -248,11 +265,8 @@ p2 <- ggplot(results_plot2, aes(
     y = "Observed FPR"
   ) +
   facet_grid(
-    u_nu_max ~ u_tau_max,
-    labeller = labeller(
-      u_tau_max = function(x) paste0("u[tau,max] = ", x),
-      u_nu_max  = function(x) paste0("u[nu,max] = ", x)
-    )
+    u_nu_lab ~ u_tau_lab,
+    labeller = label_parsed
   ) +
   theme_minimal(base_size = 20) +
   theme(
@@ -260,12 +274,13 @@ p2 <- ggplot(results_plot2, aes(
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
     strip.text = element_text(face = "bold", size = 24),
-    plot.title = element_text(size = 40, hjust = 0.5),
-    axis.title = element_text(size = 24)
+    plot.title = element_text(size = 50, hjust = 0.5),
+    axis.title = element_text(size = 45)
   )
 
 p2
 
+# Save
 ggsave(
   filename = "calibration_grid_heterogeneity.pdf",
   path = simulation_figures_folder,
@@ -274,3 +289,5 @@ ggsave(
   height = 35,
   units = "cm"
 )
+
+# rm(list = ls())
