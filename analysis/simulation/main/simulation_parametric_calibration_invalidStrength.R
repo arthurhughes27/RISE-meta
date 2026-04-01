@@ -220,7 +220,7 @@ p1 <- ggplot(
   labs(
     title = "Calibration plots across invalid surrogate means and between-study heterogeneity",
     x = "Nominal FPR",
-    y = "Observed FPR",
+    y = "Empirical FPR",
     color = expression(abs(mu[invalid]))
   ) +
   theme_minimal(base_size = 20) +

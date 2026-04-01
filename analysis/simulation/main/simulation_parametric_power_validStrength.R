@@ -139,6 +139,12 @@ p1 <- ggplot(results_plot, aes(
   color = factor(M),
   group = M
 )) +
+  scale_color_manual(
+    values = rev(scales::viridis_pal(option = "D")(length(M_grid))),
+    breaks = M_grid,
+    labels = M_grid,
+    name = "M"
+  ) +
   geom_line(linewidth = 1, alpha = 0.8) +
   geom_point(size = 2, alpha = 0.5) +
   labs(title = "Empirical power as a function of valid surrogate mean by number of studies",

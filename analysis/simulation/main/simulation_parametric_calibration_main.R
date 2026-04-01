@@ -163,7 +163,7 @@ p1 <- ggplot(results_plot, aes(
   labs(
     title = "Calibration plots across number of studies and sample sizes",
     x = "Nominal FPR",
-    y = "Observed FPR"
+    y = "Empirical FPR"
   ) +
   facet_grid(
     nm ~ M,
@@ -275,7 +275,7 @@ p2 <- ggplot(results_plot2, aes(
   labs(
     title = "Calibration plots across between- and within-study variability",
     x = "Nominal FPR",
-    y = "Observed FPR"
+    y = "Empirical FPR"
   ) +
   facet_grid(
     u_nu_lab ~ u_tau_lab,

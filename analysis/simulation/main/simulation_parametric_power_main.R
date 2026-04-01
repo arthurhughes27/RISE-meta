@@ -149,7 +149,7 @@ p1 <- ggplot(results_plot, aes(
   labs(
     title = "Empirical powervs significance level across number of studies and sample sizes",
     x = "Nominal FPR",
-    y = "Power"
+    y = "Empirical Power"
   ) +
   facet_grid(
     nm ~ M,
@@ -238,9 +238,9 @@ p2 <- ggplot(results_plot2, aes(
     labels = fmt_percent
   ) +
   labs(
-    title = "Empirical powervs significance level across between- and within-study variability",
+    title = "Empirical power vs significance level across between- and within-study variability",
     x = "Nominal FPR",
-    y = "Observed FPR"
+    y = "Empirical power"
   ) +
   facet_grid(
     u_nu_lab ~ u_tau_lab,
@@ -350,7 +350,7 @@ p3 <- ggplot(results_plot3, aes(
   geom_line(size = 1.2, alpha = 0.65) +
   geom_point(size = 3, alpha = 0.65) +
   facet_wrap(~ M, labeller = labeller(
-    M = function(x) paste("N trials =", x)
+    M = function(x) paste("M =", x)
   )) +
   scale_x_discrete(
     breaks = tau_levels,
@@ -364,7 +364,7 @@ p3 <- ggplot(results_plot3, aes(
   ) +
   labs(
     x = expression(u[tau*","*max]),
-    y = "Power",
+    y = "Empirical Power",
     title = "Empirical power across number of studies and heterogeneity settings"
   ) +
   coord_cartesian(ylim = c(0, 1)) +
