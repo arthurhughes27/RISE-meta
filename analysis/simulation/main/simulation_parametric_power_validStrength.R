@@ -1,6 +1,9 @@
 # Script to derive results for parametric simulation of trial-level surrogate effects
 # In this script, we generate only valid surrogates, in order to examine the false positive rate 
 
+seed = 01042026
+set.seed(seed)
+
 # Libraries
 library(SurrogateRank)
 library(tidyverse)

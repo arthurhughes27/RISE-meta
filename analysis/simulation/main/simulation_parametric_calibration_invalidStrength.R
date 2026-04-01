@@ -1,6 +1,9 @@
 # Script to derive results for parametric simulation of trial-level surrogate effects
 # In this script, we generate only invalid surrogates, in order to examine the false positive rate 
 
+seed = 01042026
+set.seed(seed)
+
 # Libraries
 library(SurrogateRank)
 library(tidyverse)
@@ -127,6 +130,12 @@ tau_levels <- c(
   "u[tau*','*max] == 10*epsilon"
 )
 
+legend_labels <- c(
+  "epsilon",
+  paste0("epsilon + ", formatC(abs_mu_invalid_vals[-1] - epsilon, format = "f", digits = 2, drop0trailing = TRUE))
+)
+
+
 results_plot <- results %>% 
   filter(
     u_tau_max %in% u_tau_max_vals,
@@ -153,7 +162,7 @@ min_pos <- min(
 )
 
 plot_floor <- min_pos / 10
-max_val <- 1
+max_val <- 0.5
 
 results_plot <- results_plot %>%
   mutate(
@@ -202,7 +211,9 @@ p1 <- ggplot(
   scale_color_viridis_d(
     option = "D",
     begin = 0,
-    end = 0.9
+    end = 0.9,
+    breaks = as.character(abs_mu_invalid_vals),
+    labels = parse(text = legend_labels)
   ) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
   facet_wrap(~ tau_lab, labeller = label_parsed, nrow = 1) +
@@ -228,7 +239,7 @@ ggsave(
   filename = "calibration_plot_invalidStrength.pdf",
   path = simulation_figures_folder,
   plot = p1,
-  width = 75,
+  width = 85,
   height = 18,
   units = "cm"
 )

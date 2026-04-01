@@ -1,6 +1,9 @@
 # Script to derive results for parametric simulation of trial-level surrogate effects
 # In this script, we generate only invalid surrogates, in order to examine the false positive rate 
 
+seed = 01042026
+set.seed(seed)
+
 # Libraries
 library(SurrogateRank)
 library(tidyverse)
@@ -123,7 +126,7 @@ results_plot <- results %>%
 
 # Define plotting limits
 min_val <- 1e-5
-max_val <- 1
+max_val <- 0.5
 
 # Custom percent labels
 fmt_percent <- function(x) {
@@ -208,24 +211,34 @@ results_plot2 <- results %>%
   ) %>%
   mutate(
     u_tau_lab = factor(
-      paste0("u[tau*','*max] == ", format(u_tau_max, scientific = TRUE)),
-      levels = paste0("u[tau*','*max] == ", format(tau_vals, scientific = TRUE))
+      case_when(
+        dplyr::near(u_tau_max, epsilon / 10)  ~ "u[tau*','*max] == epsilon/10",
+        dplyr::near(u_tau_max, epsilon)       ~ "u[tau*','*max] == epsilon",
+        dplyr::near(u_tau_max, epsilon * 10)  ~ "u[tau*','*max] == 10*epsilon"
+      ),
+      levels = c(
+        "u[tau*','*max] == epsilon/10",
+        "u[tau*','*max] == epsilon",
+        "u[tau*','*max] == 10*epsilon"
+      )
     ),
     u_nu_lab = factor(
-      paste0(
-        "u[nu*','*max]/n == ",
-        format(u_nu_max / fixed_nm, scientific = TRUE)
+      case_when(
+        dplyr::near(u_nu_max / fixed_nm, epsilon / 10)  ~ "u[nu*','*max]/n == epsilon/10",
+        dplyr::near(u_nu_max / fixed_nm, epsilon)       ~ "u[nu*','*max]/n == epsilon",
+        dplyr::near(u_nu_max / fixed_nm, epsilon * 10)  ~ "u[nu*','*max]/n == 10*epsilon"
       ),
-      levels = paste0(
-        "u[nu*','*max]/n == ",
-        format(nu_vals / fixed_nm, scientific = TRUE)
+      levels = c(
+        "u[nu*','*max]/n == epsilon/10",
+        "u[nu*','*max]/n == epsilon",
+        "u[nu*','*max]/n == 10*epsilon"
       )
     )
   )
 
 # Define plotting limits
 min_val <- 1e-5
-max_val <- 1
+max_val <- 0.5
 
 # Custom percent labels
 fmt_percent <- function(x) {
