@@ -58,10 +58,10 @@ preprocess_data = function(df,
            sum(study_time_collected == tp) == 1)  %>%
     ungroup()
   
-  # Remove studies without at least 2 participants
+  # Remove studies without at least 5 participants
   df_filtered = df_filtered %>%
     group_by(study_accession) %>%
-    filter(length(unique(participant_id)) > 2) %>%
+    filter(length(unique(participant_id)) > 5) %>%
     ungroup()
   
   # Select relevant columns to keep
