@@ -15,7 +15,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
 simulation_results_folder = fs::path("output", "results", "simulation", "main")
 
 # Number of independent markers to generate trial-level effects for
-J = 10000
+J = 100000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -121,13 +121,10 @@ epsilon <- 0.1
 u_tau_max_vals <- c(epsilon / 10, epsilon, epsilon * 10)
 u_nu_max_fixed <- epsilon / 10
 
-# Helper labels for parsed facet strips
 tau_levels <- c(
-  "u[tau*','*max] == epsilon/100",
   "u[tau*','*max] == epsilon/10",
   "u[tau*','*max] == epsilon",
-  "u[tau*','*max] == 10*epsilon",
-  "u[tau*','*max] == 100*epsilon"
+  "u[tau*','*max] == 10*epsilon"
 )
 
 results_plot <- results %>% 
@@ -137,52 +134,75 @@ results_plot <- results %>%
   ) %>%
   mutate(
     tau_lab = case_when(
-      dplyr::near(u_tau_max, epsilon / 100) ~ "u[tau*','*max] == epsilon/100",
-      dplyr::near(u_tau_max, epsilon / 10)  ~ "u[tau*','*max] == epsilon/10",
-      dplyr::near(u_tau_max, epsilon)       ~ "u[tau*','*max] == epsilon",
-      dplyr::near(u_tau_max, epsilon * 10)  ~ "u[tau*','*max] == 10*epsilon",
-      dplyr::near(u_tau_max, epsilon * 100) ~ "u[tau*','*max] == 100*epsilon"
+      dplyr::near(u_tau_max, epsilon / 10) ~ "u[tau*','*max] == epsilon/10",
+      dplyr::near(u_tau_max, epsilon)      ~ "u[tau*','*max] == epsilon",
+      dplyr::near(u_tau_max, epsilon * 10) ~ "u[tau*','*max] == 10*epsilon",
+      TRUE ~ NA_character_
     ),
     tau_lab = factor(tau_lab, levels = tau_levels)
-  )
+  ) %>%
+  filter(!is.na(tau_lab)) %>%
+  droplevels()
 
-# Get unique abs_mu_invalid values for color scale
-abs_mu_vals <- sort(unique(results_plot$abs_mu_invalid))
-n_colors <- length(abs_mu_vals)
+min_pos <- min(
+  c(
+    results_plot$alpha[results_plot$alpha > 0],
+    results_plot$fpr[results_plot$fpr > 0]
+  ),
+  na.rm = TRUE
+)
 
-min_val <- 1e-4
+plot_floor <- min_pos / 10
 max_val <- 1
 
-# Custom percent labels: 0.0001 -> 0.01%, 0.2 -> 20%, 1 -> 100%
+results_plot <- results_plot %>%
+  mutate(
+    alpha_plot = if_else(alpha <= 0, plot_floor, alpha),
+    fpr_plot   = if_else(fpr   <= 0, plot_floor, fpr)
+  )
+
+axis_breaks <- c(plot_floor, alpha_grid[alpha_grid > plot_floor], max_val)
+axis_breaks <- unique(sort(axis_breaks))
+
 fmt_percent <- function(x) {
-  lab <- scales::label_percent(accuracy = 0.01)(x)
-  sub("\\.?0+%$", "%", lab)
+  out <- scales::label_percent(accuracy = 0.01)(x)
+  out <- sub("\\.?0+%$", "%", out)
+  out[abs(x - plot_floor) < .Machine$double.eps^0.5] <- "0%"
+  out
 }
 
-p1 <- ggplot(results_plot, aes(x = alpha, y = fpr, color = factor(abs_mu_invalid))) +
+ribbon_df <- tidyr::expand_grid(
+  x = c(plot_floor, max_val),
+  tau_lab = unique(results_plot$tau_lab)
+)
+
+p1 <- ggplot(
+  results_plot,
+  aes(x = alpha_plot, y = fpr_plot, color = factor(abs_mu_invalid))
+) +
   geom_ribbon(
-    data = tibble(x = c(min_val, max_val)),
-    aes(x = x, ymin = x, ymax = max_val),
+    data = ribbon_df,
+    aes(x = x, ymin = x, ymax = max_val, group = tau_lab),
     inherit.aes = FALSE,
     fill = "grey80",
     alpha = 0.5
   ) +
-  geom_line(size = 1, alpha = 0.8) +
-  geom_point(size = 2, alpha = 0.6) +
+  geom_line(linewidth = 1, alpha = 0.6, na.rm = TRUE) +
+  geom_point(size = 2, alpha = 0.6, na.rm = TRUE) +
   scale_x_log10(
-    limits = c(min_val, max_val),
-    breaks = c(alpha_grid, max_val),
+    limits = c(plot_floor, max_val),
+    breaks = axis_breaks,
     labels = fmt_percent
   ) +
   scale_y_log10(
-    limits = c(min_val, max_val),
-    breaks = c(alpha_grid, max_val),
+    limits = c(plot_floor, max_val),
+    breaks = axis_breaks,
     labels = fmt_percent
   ) +
-  scale_color_viridis(
-    discrete = TRUE,
+  scale_color_viridis_d(
     option = "D",
-    begin = 0, end = 0.9
+    begin = 0,
+    end = 0.9
   ) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
   facet_wrap(~ tau_lab, labeller = label_parsed, nrow = 1) +
