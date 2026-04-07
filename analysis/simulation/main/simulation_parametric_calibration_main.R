@@ -12,6 +12,7 @@ library(viridis)
 library(dplyr)
 library(tibble)
 library(scales)
+library(patchwork)
 
 # Folder to store results and figures
 simulation_figures_folder = fs::path("output", "figures", "simulation", "main")
@@ -116,12 +117,13 @@ fixed_u_nu_max = epsilon*100
 # Keep only the fixed heterogeneity setting
 results_plot <- results %>%
   filter(
-   u_tau_max == fixed_u_tau_max, 
-   u_nu_max == fixed_u_nu_max
+    u_tau_max == fixed_u_tau_max, 
+    u_nu_max == fixed_u_nu_max
   ) %>%
   mutate(
-    M = factor(M, levels = sort(unique(M))),
-    nm = factor(nm, levels = sort(unique(nm)))
+    # Pre-format labels as plotmath expressions
+    M  = factor(M, levels = sort(unique(M)), labels = paste0("M == ", sort(unique(M)))),
+    nm = factor(nm, levels = sort(unique(nm)), labels = paste0("n[m] == ", sort(unique(nm))))
   )
 
 # Define plotting limits
@@ -134,6 +136,7 @@ fmt_percent <- function(x) {
   sub("\\.?0+%$", "%", lab)
 }
 
+# Plot
 p1 <- ggplot(results_plot, aes(
   x = alpha,
   y = fpr,
@@ -167,17 +170,14 @@ p1 <- ggplot(results_plot, aes(
   ) +
   facet_grid(
     nm ~ M,
-    labeller = labeller(
-      M = function(x) paste0("M = ", x),
-      nm = function(x) paste0("n = ", x)
-    )
+    labeller = label_parsed   # interpret labels as plotmath
   ) +
   theme_minimal(base_size = 20) +
   theme(
     legend.position = "none",
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
-    strip.text = element_text(face = "bold", size = 24),
+    strip.text = element_text(size = 35),
     plot.title = element_text(size = 50, hjust = 0.5),
     axis.title = element_text(size = 45)
   )
@@ -286,7 +286,7 @@ p2 <- ggplot(results_plot2, aes(
     legend.position = "none",
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
-    strip.text = element_text(face = "bold", size = 24),
+    strip.text = element_text(size = 35),
     plot.title = element_text(size = 50, hjust = 0.5),
     axis.title = element_text(size = 45)
   )
@@ -303,4 +303,24 @@ ggsave(
   units = "cm"
 )
 
-rm(list = ls())
+combined_plot <- (p1 / plot_spacer() / p2) +
+  plot_layout(heights = c(1, 0.15, 1)) + 
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag = element_text(face = "bold", size = 100),
+    plot.tag.position = c(0.02, 0.98)
+  )
+
+combined_plot
+
+ggsave(
+  filename = "calibration_grids_combined.pdf",
+  path = simulation_figures_folder,
+  plot = combined_plot,
+  width = 75,
+  height = 72,   # adjust if needed
+  units = "cm"
+)
+
+# rm(list = ls())
+
