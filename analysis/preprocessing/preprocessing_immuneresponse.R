@@ -303,6 +303,110 @@ hipc_immResp <- list(
   reduce(full_join, by = c("participant_id", "study_accession")) %>%
   arrange(participant_id)
 
+# ---------------------------
+# Compute strain-wise z-scores, then participant-level mean/max of z-scores
+# Produces columns:
+# immResp_mean_nAb_std_pre_value, immResp_mean_nAb_std_post_value,
+# immResp_max_nAb_std_pre_value,  immResp_max_nAb_std_post_value,
+# immResp_mean_hai_std_pre_value, immResp_mean_hai_std_post_value,
+# immResp_max_hai_std_pre_value,  immResp_max_hai_std_post_value
+# ---------------------------
+library(tidyr)
+
+# 1) pivot pre/post into long time column and z-score within (study x assay x strain x time)
+std_long <- response_MFC_df %>%
+  select(participant_id, study_accession, assay, response_strain_analyte,
+         response_MFC_pre_value, response_MFC_post_value) %>%
+  pivot_longer(
+    cols = c(response_MFC_pre_value, response_MFC_post_value),
+    names_to = "time",
+    values_to = "value"
+  ) %>%
+  mutate(time = ifelse(time == "response_MFC_pre_value", "pre", "post")) %>%
+  group_by(study_accession, assay, response_strain_analyte, time) %>%
+  mutate(
+    grp_mean = mean(value, na.rm = TRUE),
+    grp_sd   = sd(value, na.rm = TRUE),
+    value_z  = ifelse(is.na(value), NA_real_,
+                      ifelse(is.na(grp_sd) | grp_sd == 0, 0, (value - grp_mean) / grp_sd))
+  ) %>%
+  ungroup() %>%
+  select(participant_id, study_accession, assay, response_strain_analyte, time, value_z)
+
+# 2) summarise per participant/study/assay/time: mean and max of z-scores across strains
+std_summary <- std_long %>%
+  group_by(participant_id, study_accession, assay, time) %>%
+  summarise(
+    mean_std = if(all(is.na(value_z))) NA_real_ else mean(value_z, na.rm = TRUE),
+    max_std  = if(all(is.na(value_z))) NA_real_ else max(value_z, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3) split into separate tibbles for each (transformation x assay x time) with requested names
+immResp_mean_nAb_std_pre  <- std_summary %>%
+  filter(assay == "nAb", time == "pre") %>%
+  rename(immResp_mean_nAb_std_pre_value  = mean_std)
+
+immResp_mean_nAb_std_post <- std_summary %>%
+  filter(assay == "nAb", time == "post") %>%
+  rename(immResp_mean_nAb_std_post_value = mean_std)
+
+immResp_max_nAb_std_pre   <- std_summary %>%
+  filter(assay == "nAb", time == "pre") %>%
+  rename(immResp_max_nAb_std_pre_value   = max_std)
+
+immResp_max_nAb_std_post  <- std_summary %>%
+  filter(assay == "nAb", time == "post") %>%
+  rename(immResp_max_nAb_std_post_value  = max_std)
+
+immResp_mean_hai_std_pre  <- std_summary %>%
+  filter(assay == "hai", time == "pre") %>%
+  rename(immResp_mean_hai_std_pre_value  = mean_std)
+
+immResp_mean_hai_std_post <- std_summary %>%
+  filter(assay == "hai", time == "post") %>%
+  rename(immResp_mean_hai_std_post_value = mean_std)
+
+immResp_max_hai_std_pre   <- std_summary %>%
+  filter(assay == "hai", time == "pre") %>%
+  rename(immResp_max_hai_std_pre_value   = max_std)
+
+immResp_max_hai_std_post  <- std_summary %>%
+  filter(assay == "hai", time == "post") %>%
+  rename(immResp_max_hai_std_post_value  = max_std)
+
+# 4) join the eight tibbles into one table keyed by participant_id + study_accession,
+#    keeping only the final eight value columns plus keys
+std_cols <- list(
+  immResp_mean_nAb_std_pre,
+  immResp_mean_nAb_std_post,
+  immResp_max_nAb_std_pre,
+  immResp_max_nAb_std_post,
+  immResp_mean_hai_std_pre,
+  immResp_mean_hai_std_post,
+  immResp_max_hai_std_pre,
+  immResp_max_hai_std_post
+) %>%
+  purrr::reduce(function(x, y) full_join(x, y, by = c("participant_id", "study_accession"))) %>%
+  select(
+    participant_id,
+    study_accession,
+    immResp_mean_nAb_std_pre_value,
+    immResp_mean_nAb_std_post_value,
+    immResp_max_nAb_std_pre_value,
+    immResp_max_nAb_std_post_value,
+    immResp_mean_hai_std_pre_value,
+    immResp_mean_hai_std_post_value,
+    immResp_max_hai_std_pre_value,
+    immResp_max_hai_std_post_value
+  )
+
+# 5) merge into hipc_immResp (preserve existing cols; append only the 8 standardized columns)
+hipc_immResp <- hipc_immResp %>%
+  left_join(std_cols, by = c("participant_id", "study_accession")) %>%
+  arrange(participant_id)
+
+
 # Use fs::path() to specify the data path robustly
 p_save <- fs::path(processed_data_folder, "hipc_immResp.rds")
 

@@ -14,14 +14,22 @@ center_counts <- ARMD %>%
   group_by(Center, Treat) %>%
   summarise(n_patients = n(), .groups = "drop")
 
-ok_centers <- center_counts %>%
+ok_centers <- ARMD %>%
+  group_by(Center, Treat) %>%
+  summarise(n_patients = n(), .groups = "drop") %>%
   group_by(Center) %>%
-  filter(!(Center %in% c(13829, 13834, 13842))) %>%
-  filter(all(n_patients >= 2)) %>%
+  filter(
+    all(n_patients >= 2),      # ≥2 per Treat
+    sum(n_patients) >= 5       # ≥5 total
+  ) %>%
   pull(Center)
 
 dat <- ARMD %>%
   filter(Center %in% ok_centers)
+
+dat$Id %>% unique() %>% length()
+
+dat$Center %>% unique() %>% length()
 
 ccc_fun <- function(x, y) {
   if (length(x) < 2 || length(y) < 2)

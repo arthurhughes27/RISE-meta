@@ -16,12 +16,16 @@ center_counts <- Ovarian %>%
 
 ok_centers <- center_counts %>%
   group_by(Center) %>%
-  filter(!(Center %in% c(4, 20, 26, 41, 50, 57, 58, 63, 109))) %>%
-  filter(all(n_patients >= 2) & sum(n_patients) >= 4) %>%
+  # filter(!(Center %in% c(4, 20, 26, 41, 50, 57, 58, 63, 109))) %>%
+  filter(all(n_patients >= 2) & sum(n_patients) >= 5) %>%
   pull(Center)
 
 dat <- Ovarian %>%
   filter(Center %in% ok_centers)
+
+dat$Patient %>% unique() %>% length()
+
+dat$Center %>% unique() %>% length()
 
 ccc_fun <- function(x, y) {
   if (length(x) < 2 || length(y) < 2)

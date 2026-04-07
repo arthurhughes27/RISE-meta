@@ -118,6 +118,15 @@ preprocessed_data_list = preprocess_data(
   seed = hyperparameter_list$seed
 )
 
+preprocessed_data_list[["df.full"]]$participant_id %>% unique() %>% length()
+preprocessed_data_list[["df.full"]]$study_accession %>% unique() %>% length()
+
+preprocessed_data_list[["df.full"]] %>% 
+  select(participant_id, study_accession) %>% 
+  distinct() %>% 
+  group_by(study_accession) %>% 
+  summarize(n = n())
+
 df_train = preprocessed_data_list[["df.screen"]]
 df_test = preprocessed_data_list[["df.evaluate"]]
 
