@@ -1,4 +1,8 @@
-# Script to run the main analysis for the paper : Meta-Analytic Evaluation of High-Dimensional Surrogate Markers : Application to vaccinology
+# Script to run the supplementary analysis evaluating the impact of the geneset definition
+
+grid = c("BG3M", "none")
+
+for(val in grid){
 
 # Define global hyperparameters for analysis
 hyperparameter_list = list(
@@ -65,18 +69,19 @@ hyperparameter_list = list(
   # Predictor transformation parameters
   aggregation_function = mean,
   # Function defining aggregation from gene to geneset level 
-  geneset_definition = "BTM",
+  geneset_definition = val,
   # Argument stating the definition of the genesets (options are BTM or BG3M)
   
   
   # Other hyperparameters
   n.cores = 5,
   # number of cores for parallel computing
-  screen.plot.topN = 15, # how many predictors to plot
+  screen.plot.topN = 20, # how many predictors to plot
+  screen.plot.point.estimate = F,
   
   # Graphical parameters
   screen.plot.width = 40,
-  screen.plot.height = 18,
+  screen.plot.height = 23,
   forest.plot.width = 32,
   forest.plot.height = 15,
   fit.plot.width = 37,
@@ -92,8 +97,10 @@ file_name_tag = paste0("_timepoint",
                        "_epsMode",
                        hyperparameter_list$epsilon.meta.mode,
                        ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
-                          paste0("_eps", hyperparameter_list$epsilon.meta), 
-                          paste0("_power", hyperparameter_list$power.want.s.study)))
+                              paste0("_eps", hyperparameter_list$epsilon.meta), 
+                              paste0("_power", hyperparameter_list$power.want.s.study)),
+                       "_geneset",
+                       hyperparameter_list$geneset_definition)
 
 
 # Libraries
@@ -105,12 +112,18 @@ sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
-application_figures_folder <- fs::path("output", "figures", "application", "main")
+application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "geneset")
 
 # Load merged gene expression and GS_list gene set objects
 df <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
-GS_list <- readRDS(fs::path(processed_data_folder, paste0(hyperparameter_list$geneset_definition, "_processed.rds")))
-
+if(!hyperparameter_list$geneset_definition == "none") {
+  GS_list <- readRDS(fs::path(
+    processed_data_folder,
+    paste0(hyperparameter_list$geneset_definition, "_processed.rds")
+  ))
+} else {
+  GS_list = NULL
+}
 preprocessed_data_list = preprocess_data(
   df = df,
   tp = hyperparameter_list$tp,
@@ -165,6 +178,7 @@ rise_screen_result <- rise.screen.meta(
   meta.analysis.method         = hyperparameter_list$meta.analysis.method,
   n.cores                      = hyperparameter_list$n.cores,
   screen.plot.topN             = hyperparameter_list$screen.plot.topN,
+  screen.plot.point.estimate   = hyperparameter_list$screen.plot.point.estimate,
   return.evaluate.results      = hyperparameter_list$return.evaluate.results,
   return.fit.plot              = hyperparameter_list$return.fit.plot,
   return.forest.plot           = hyperparameter_list$return.forest.plot, 
@@ -282,4 +296,5 @@ ggsave(
   units    = "cm"
 )
 
+}
 # rm(list = ls())

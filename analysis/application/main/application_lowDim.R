@@ -5,7 +5,7 @@ library(dplyr)
 library(patchwork)
 library(fs)
 
-application_figures_folder <- fs::path("output", "figures", "application", "classic")
+application_figures_folder <- fs::path("output", "figures", "application", "main")
 
 ccc_fun <- function(x, y) {
   if (length(x) < 2 || length(y) < 2) return(NA_real_)
@@ -175,6 +175,10 @@ rise_fit_ARMD <- rise.screen.meta(
   meta.analysis.method = "RE"
 )
 
+ARMD_forest = rise_fit_ARMD$gamma.s.plot$forest.plot
+
+ARMD_forest
+
 gamma_df_ARMD <- rise_fit_ARMD[["screening.metrics.study"]]
 
 R2_rise_w_ARMD <- summary(lm(u.y ~ u.s, data = gamma_df_ARMD, weights = n))$r.squared
@@ -251,6 +255,9 @@ combined_plot_ARMD <-
     title = "A) Age-related macular degeneration dataset",
     theme = theme(plot.title = element_text(size = 40, face = "bold", hjust = 0.5))
   )
+
+
+
 
 # ============================================================
 # Ovarian cancer
@@ -377,6 +384,10 @@ rise_fit_Ovarian <- rise.screen.meta(
   test = "knha",
   meta.analysis.method = "RE"
 )
+
+Ovarian_forest = rise_fit_Ovarian$gamma.s.plot$forest.plot
+
+Ovarian_forest
 
 gamma_df_Ovarian <- rise_fit_Ovarian[["screening.metrics.study"]]
 

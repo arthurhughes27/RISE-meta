@@ -6,9 +6,23 @@ extract_rise_inputs <- function(df, predictor_names, genesets, geneset_names, ag
   yone      = df %>% filter(study_time_collected > 0)  %>% pull(response_post)
   yzero     = df %>% filter(study_time_collected == 0) %>% pull(response_pre)
   
-  sone = aggregate_to_geneset(df = sone_raw, genesets = genesets, geneset_names = geneset_names, FUN = aggregation_function)
-  szero = aggregate_to_geneset(df = szero_raw, genesets = genesets, geneset_names = geneset_names, FUN = aggregation_function)
-  
+  if (!is.null(genesets)) {
+    sone = aggregate_to_geneset(
+      df = sone_raw,
+      genesets = genesets,
+      geneset_names = geneset_names,
+      FUN = aggregation_function
+    )
+    szero = aggregate_to_geneset(
+      df = szero_raw,
+      genesets = genesets,
+      geneset_names = geneset_names,
+      FUN = aggregation_function
+    )
+  } else {
+    sone = sone_raw
+    szero = szero_raw
+  }
   studyone  = df %>% filter(study_time_collected > 0)  %>% pull(study_accession)
   studyzero = df %>% filter(study_time_collected == 0) %>% pull(study_accession)
   
