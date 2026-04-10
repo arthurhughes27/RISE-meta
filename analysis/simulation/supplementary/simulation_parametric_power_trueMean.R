@@ -178,7 +178,7 @@ ggsave(
   path = simulation_figures_folder,
   plot = p1,
   width = 30,
-  height = 18,
+  height = 15,
   units = "cm"
 )
 
