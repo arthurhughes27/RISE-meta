@@ -88,7 +88,7 @@ n_studies_max <- length(unique(df$study_accession))
 n_studies_grid <- c(2:n_studies_max)
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
-B <- 1000
+B = 100000
 perm_seeds <- sample.int(n = .Machine$integer.max, size = B)
 p_save <- fs::path(results_folder, "simulation_nonparametric_nstudies.rds")
 checkpoint_every <- 100
