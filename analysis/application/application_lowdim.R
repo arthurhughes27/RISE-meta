@@ -269,7 +269,9 @@ ok_centers_Ovarian <- Ovarian %>%
   pull(Center)
 
 dat_Ovarian <- Ovarian %>%
-  filter(Center %in% ok_centers_Ovarian)
+  filter(Center %in% ok_centers_Ovarian) %>% 
+  mutate(Surv = log(Surv),
+         Pfs = log(Pfs))
 
 dat_Ovarian$Patient %>% unique() %>% length()
 dat_Ovarian$Center %>% unique() %>% length()
@@ -341,8 +343,8 @@ jointModel_plot_Ovarian <- trial_effects_Ovarian %>%
   ) +
   coord_fixed(ratio = 1) +
   labs(
-    x = "Treatment effect on progression-free survival",
-    y = "Treatment effect on overall survival",
+    x = "Treatment effect on log(progression-free survival)",
+    y = "Treatment effect on log(overall survival)",
     size = "Center N"
   ) +
   theme_minimal(base_size = 18) +
@@ -413,8 +415,8 @@ riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
   scale_y_continuous(limits = c(-0.1, 1.1), expand = c(0, 0)) +
   coord_fixed(ratio = 1) +
   labs(
-    x = "Treatment effect on progression-free survival",
-    y = "Treatment effect on overall survival",
+    x = "Treatment effect on log(progression-free survival)",
+    y = "Treatment effect on log(overall survival)",
     size = "Center N"
   ) +
   theme_minimal(base_size = 18) +
