@@ -483,24 +483,6 @@ overall_combined_plot
 # ============================================================
 
 ggsave(
-  filename = "combined_surrogacy_ARMD.pdf",
-  plot = combined_plot_ARMD,
-  path  = application_figures_folder,
-  width = 40,
-  height = 20,
-  units = "cm"
-)
-
-ggsave(
-  filename = "combined_surrogacy_Ovarian.pdf",
-  plot = combined_plot_Ovarian,
-  path  = application_figures_folder,
-  width = 40,
-  height = 20,
-  units = "cm"
-)
-
-ggsave(
   filename = "combined_surrogacy_overall.pdf",
   plot = overall_combined_plot,
   path  = application_figures_folder,
