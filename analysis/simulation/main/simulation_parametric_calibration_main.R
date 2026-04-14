@@ -37,7 +37,7 @@ u_tau_max_vals <- c(epsilon/100, epsilon/10, epsilon, epsilon*10, epsilon*100)
 u_nu_max_vals <- c(epsilon/100, epsilon/10, epsilon, epsilon*10, epsilon*100)
 
 # Grid of alpha values for the calibration plot
-alpha_grid <- c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.5)
+alpha_grid <- c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.5)
 
 # Initialise data frame WITHOUT alpha
 results <- expand.grid(
@@ -177,21 +177,13 @@ p1 <- ggplot(results_plot, aes(
     legend.position = "none",
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
-    strip.text = element_text(size = 35),
-    plot.title = element_text(size = 50, hjust = 0.5),
-    axis.title = element_text(size = 45)
+    strip.text = element_text(size = 55),
+    plot.title = element_text(size = 100, hjust = 0.5),
+    axis.title = element_text(size = 115),
+    axis.text = element_text(size = 35)
   )
 
 p1
-
-ggsave(
-  filename = "calibration_grid_samples.pdf",
-  path = simulation_figures_folder,
-  plot = p1,
-  width = 75,
-  height = 35,
-  units = "cm"
-)
 
 
 # Plot 2: Grid of calibration plots for between- and within-study variability
@@ -236,16 +228,6 @@ results_plot2 <- results %>%
     )
   )
 
-# Define plotting limits
-min_val <- 1e-5
-max_val <- 0.5
-
-# Custom percent labels
-fmt_percent <- function(x) {
-  lab <- scales::label_percent(accuracy = 0.01)(x)
-  sub("\\.?0+%$", "%", lab)
-}
-
 # Plot
 p2 <- ggplot(results_plot2, aes(
   x = alpha,
@@ -286,22 +268,13 @@ p2 <- ggplot(results_plot2, aes(
     legend.position = "none",
     panel.grid.minor = element_blank(),
     strip.background = element_rect(fill = "grey80", color = NA),
-    strip.text = element_text(size = 35),
-    plot.title = element_text(size = 50, hjust = 0.5),
-    axis.title = element_text(size = 45)
+    strip.text = element_text(size = 55),
+    plot.title = element_text(size = 100, hjust = 0.5),
+    axis.title = element_text(size = 115),
+    axis.text = element_text(size = 35)
   )
 
 p2
-
-# Save
-ggsave(
-  filename = "calibration_grid_heterogeneity.pdf",
-  path = simulation_figures_folder,
-  plot = p2,
-  width = 75,
-  height = 35,
-  units = "cm"
-)
 
 combined_plot <- (p1 / plot_spacer() / p2) +
   plot_layout(heights = c(1, 0.15, 1)) + 
@@ -317,10 +290,11 @@ ggsave(
   filename = "calibration_grids_combined.pdf",
   path = simulation_figures_folder,
   plot = combined_plot,
-  width = 75,
-  height = 72,   # adjust if needed
-  units = "cm"
+  width = 125,
+  height = 135,   # adjust if needed
+  units = "cm",
+  limitsize = FALSE
 )
 
-rm(list = ls())
+# rm(list = ls())
 
