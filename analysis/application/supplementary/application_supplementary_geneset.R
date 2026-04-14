@@ -112,7 +112,7 @@ sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
-application_figures_folder <- fs::path("output", "figures", "application", "supplementary", "geneset")
+application_figures_folder <- fs::path("output", "figures", "application", "supplementary")
 
 # Load merged gene expression and GS_list gene set objects
 df <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
@@ -214,23 +214,23 @@ ggsave(
   units    = "cm"
 )
 
-ggsave(
-  filename = paste0("screen_forest", file_name_tag, ".pdf"),
-  path     = application_figures_folder,
-  plot     = screen_forest_1,
-  width    = hyperparameter_list$forest.plot.width,
-  height   = hyperparameter_list$forest.plot.height,
-  units    = "cm"
-)
+# ggsave(
+#   filename = paste0("screen_forest", file_name_tag, ".pdf"),
+#   path     = application_figures_folder,
+#   plot     = screen_forest_1,
+#   width    = hyperparameter_list$forest.plot.width,
+#   height   = hyperparameter_list$forest.plot.height,
+#   units    = "cm"
+# )
 
-ggsave(
-  filename = paste0("screen_fit", file_name_tag, ".pdf"),
-  path     = application_figures_folder,
-  plot     = screen_fit_1,
-  width    = hyperparameter_list$fit.plot.width,
-  height   = hyperparameter_list$fit.plot.height,
-  units    = "cm"
-)
+# ggsave(
+#   filename = paste0("screen_fit", file_name_tag, ".pdf"),
+#   path     = application_figures_folder,
+#   plot     = screen_fit_1,
+#   width    = hyperparameter_list$fit.plot.width,
+#   height   = hyperparameter_list$fit.plot.height,
+#   units    = "cm"
+# )
 
 # ----- Evaluation on test data -----
 test_inputs <- extract_rise_inputs(df_test,
@@ -287,14 +287,14 @@ ggsave(
   units    = "cm"
 )
 
-ggsave(
-  filename = paste0("evaluation_fit", file_name_tag, ".pdf"),
-  path     = application_figures_folder,
-  plot     = evaluation_fit_1,
-  width    = hyperparameter_list$fit.plot.width,
-  height   = hyperparameter_list$fit.plot.height,
-  units    = "cm"
-)
+# ggsave(
+#   filename = paste0("evaluation_fit", file_name_tag, ".pdf"),
+#   path     = application_figures_folder,
+#   plot     = evaluation_fit_1,
+#   width    = hyperparameter_list$fit.plot.width,
+#   height   = hyperparameter_list$fit.plot.height,
+#   units    = "cm"
+# )
 
 }
-# rm(list = ls())
+rm(list = ls())

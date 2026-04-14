@@ -490,3 +490,5 @@ ggsave(
   height = 42,
   units = "cm"
 )
+
+rm(list = ls())
