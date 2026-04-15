@@ -59,7 +59,7 @@ for (i in seq_len(nrow(results))) {
   u_nu_max <- results$u_nu_max[i]
   
   # --- DATA GENERATION ---
-  data <- simulate.multi.study.surrogates(
+  data <- generate.example.data.highdim.multistudy(
     epsilon = epsilon,
     M = M,
     sample_sizes = sample_sizes,

@@ -74,7 +74,7 @@ for (i in seq_len(nrow(results))) {
   invalid_mean_discrete = c(-results$invalid_mean_discrete[i], results$invalid_mean_discrete[i])
   
   # --- DATA GENERATION ---
-  data <- simulate.multi.study.surrogates(
+  data <- generate.example.data.highdim.multistudy(
     epsilon = epsilon,
     M = M,
     sample_sizes = sample_sizes,
