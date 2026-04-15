@@ -14,8 +14,8 @@ set.seed(08012025)
 processed_data_folder <- "data"
 
 # Folder to store images
-results_folder <- fs::path("output", "results", "simulation")
-figures_folder <- fs::path("output", "figures", "simulation")
+results_folder <- fs::path("output", "results", "simulation", "supplementary")
+figures_folder <- fs::path("output", "figures", "simulation", "supplementary")
 functions_folder <- fs::path("R")
 
 # Source the function to generate a permuted dataset
