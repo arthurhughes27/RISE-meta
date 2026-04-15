@@ -1,6 +1,5 @@
 data/
 data-raw/
-manuscript/
 output/
 
 .Rproj.user
@@ -9,4 +8,3 @@ output/
 .Ruserdata
 
 .positai
-.renv

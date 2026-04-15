@@ -3,6 +3,9 @@
 # Script to install any missing dependencies
 source(fs::path("analysis", "install_dependencies.R"))
 
+# Script to ensure project structure is in place
+source(fs::path("analysis", "create_project_structure.R"))
+
 # Master script for preprocessing files
 source(fs::path("analysis", "preprocessing", "preprocessing_master.R"))
 

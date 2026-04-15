@@ -10,7 +10,7 @@ The methodology is described in the paper "Meta-Analysis of High-Dimensional Sur
   Raw data files downloaded by the user (not stored in this repository)
 
 - `data/`  
-  Processed data generated during preprocessing
+  Processed data generated during preprocessing (not stored in this repository)
 
 - `R/`  
   Helper functions used throughout the project
@@ -23,10 +23,20 @@ The methodology is described in the paper "Meta-Analysis of High-Dimensional Sur
   - `application/`
   - `simulation/`
 
-- `output/`  
+- `output/` (not stored in this repository) 
   Project outputs:
   - `results/` (raw results)
   - `figures/` (manuscript figures)
+  
+- `manuscript/` 
+  Other files necessary for the manuscript:
+  - `diagrams/` Manually created diagrams for illustration in the manuscript
+  
+This project structure can be created by running the file
+
+```r
+source("analysis/create_project_structure.R")
+```
 
 ## Data access
 
