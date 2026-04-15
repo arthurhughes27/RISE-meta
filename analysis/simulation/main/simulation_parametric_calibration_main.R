@@ -296,5 +296,5 @@ ggsave(
   limitsize = FALSE
 )
 
-# rm(list = ls())
+rm(list = ls())
 

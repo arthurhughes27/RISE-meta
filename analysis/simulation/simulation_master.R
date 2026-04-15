@@ -7,6 +7,6 @@ source(fs::path("analysis", "simulation", "main", "simulation_parametric_power_m
 source(fs::path("analysis", "simulation", "supplementary", "simulation_parametric_power_trueMean.R"))
 source(fs::path("analysis", "simulation", "supplementary", "simulation_parametric_calibration_trueMean.R"))
 source(fs::path("analysis", "simulation", "supplementary", "simulation_parametric_calibration_metaAnalysisModel.R"))
-# source(fs::path("analysis", "simulation", "supplementary", "simulation_nonparametric_nstudies.R"))
-# source(fs::path("analysis", "simulation", "supplementary", "simulation_nonparametric_nsamples.R"))
+source(fs::path("analysis", "simulation", "supplementary", "simulation_nonparametric_nstudies.R"))
+source(fs::path("analysis", "simulation", "supplementary", "simulation_nonparametric_nsamples.R"))
 
