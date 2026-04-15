@@ -1,12 +1,5 @@
 # Descriptive summaries and figures for the HIPC influenza vaccine cohorts
 library(tidyverse)
-library(SurrogateRank)
-library(grid)
-library(scales)
-library(cowplot)
-library(metafor)
-library(forcats)
-library(stringr)
 
 # Paths to processed data and output figures
 processed_data_folder <- "data"
@@ -138,3 +131,5 @@ ggsave(
   height   = 26,
   units    = "cm"
 )
+
+rm(list = ls())

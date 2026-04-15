@@ -1,13 +1,13 @@
 # Master script to run all preprocessing, descriptive, data analysis and simulation scripts
 
 # Master script for preprocessing files
-source("analysis/preprocessing_master.R")
+source(fs::path("analysis", "preprocessing", "preprocessing_master.R"))
 
 # Master script for data description files
-source("analysis/descriptive_master.R")
+source(fs::path("analysis", "descriptive", "descriptive_master.R"))
 
 # Master script for data analysis files
-source("analysis/analysis_master.R")
+source(fs::path("analysis", "application", "application_master.R"))
 
 # Master script for simulation files
-source("analysis/simulation_master.R")
+source(fs::path("analysis", "simulation", "simulation_master.R"))
