@@ -1,5 +1,8 @@
 # Master script to run all preprocessing, descriptive, data analysis and simulation scripts
 
+# Script to install any missing dependencies
+source(fs::path("analysis", "install_dependencies.R"))
+
 # Master script for preprocessing files
 source(fs::path("analysis", "preprocessing", "preprocessing_master.R"))
 

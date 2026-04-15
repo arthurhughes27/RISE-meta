@@ -7,17 +7,32 @@ library(dplyr)
 library(stringr)
 library(GSA)
 library(readr)
+library(readxl)
 
 # Specify folder within folder root where the raw data lives
 raw_data_folder = "data-raw"
 
 # Use fs::path() to specify the data paths robustly
-p_load_BG3M <- fs::path(raw_data_folder, "BG3M.RDS")
+p_load_BG3M_raw <- fs::path(raw_data_folder, "Suppl_File_1_BIOINF.xls")
 p_load_expression <- fs::path(raw_data_folder, "all_noNorm_eset.rds")
 
 # Load data
-BG3M = readRDS(p_load_BG3M)
+BG3M_raw = read_excel(p_load_BG3M_raw)
 all_noNorm_eset <- readRDS(p_load_expression)
+
+# First we must preprocess the BG3M_raw raw data into a .gmt format
+
+# Member genes 
+genesets <- strsplit(BG3M_raw$`Member genes`, ",\\s*")
+
+# Trim spaces and remove duplicates/empties
+genesets <- lapply(genesets, function(x) unique(trimws(x[x != ""])))
+
+BG3M <- list(
+  genesets = genesets,
+  geneset.names = BG3M_raw$ID,
+  geneset.descriptions = BG3M_raw$`Module title`
+)
 
 # First take the expression data
 expr_data = all_noNorm_eset@assayData[["exprs"]]
