@@ -8,7 +8,8 @@ library(knitr)
 library(kableExtra)
 
 # Set a global seed
-set.seed(08012025)
+global.seed = 08012025
+set.seed(global.seed)
 
 # Directory containing processed data files
 processed_data_folder <- "data"

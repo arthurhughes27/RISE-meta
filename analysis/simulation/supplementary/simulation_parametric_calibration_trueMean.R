@@ -1,8 +1,8 @@
 # Script to investigate the impact of the meta-analysis model (random versus fixed effects)
 # And the estimation procedure for the variance of the pooled effect on the test calibration
 
-seed = 01042026
-set.seed(seed)
+global.seed = 08012025
+set.seed(global.seed)
 
 # Libraries
 library(SurrogateRank)
@@ -63,6 +63,10 @@ results <- expand.grid(
 # Initialise list for storage
 results_list <- vector("list", nrow(results))
 
+# Pre-generate seeds for each replicate from the master RNG so results are
+# fully reproducible regardless of iteration order or future code changes.
+seeds <- sample.int(n = .Machine$integer.max, size = nrow(results))
+
 for (i in seq_len(nrow(results))) {
   
   M <- results$M[i]
@@ -86,7 +90,8 @@ for (i in seq_len(nrow(results))) {
     u_nu_max = u_nu_max,
     prop_invalid_under = 0.5,
     invalid_at_boundary = FALSE,
-    invalid_mean_discrete = invalid_mean_discrete
+    invalid_mean_discrete = invalid_mean_discrete, 
+    seed = seeds[i]
   )
   
   # Storage for p-values
