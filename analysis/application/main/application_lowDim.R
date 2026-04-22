@@ -112,17 +112,13 @@ trial_ccc_ARMD_boot <- boot(
   R = 2000
 )
 
-trial_ccc_ARMD_CI <- boot.ci(trial_ccc_ARMD_boot, type = c("bca", "perc"))
+trial_ccc_ARMD_CI <- boot.ci(trial_ccc_ARMD_boot, type = c("bca"))
 
 trial_ccc_ARMD_CI_bca <- c(
   lower = trial_ccc_ARMD_CI$bca[1, 4],
   upper = trial_ccc_ARMD_CI$bca[1, 5]
 )
 
-trial_ccc_ARMD_CI_perc <- c(
-  lower = trial_ccc_ARMD_CI$perc[1, 4],
-  upper = trial_ccc_ARMD_CI$perc[1, 5]
-)
 
 plot.min.global_ARMD <- min(trial_effects_ARMD$u.s, trial_effects_ARMD$u.y) - 2
 
@@ -151,7 +147,7 @@ jointModel_plot_ARMD <- trial_effects_ARMD %>%
       "Trial R2 = ", round(trial_R2_ARMD, 2),
       " [", round(fit_full_ARMD$Trial.R2$`CI lower limit`, 2), ", ", round(fit_full_ARMD$Trial.R2$`CI upper limit`, 2), "]",
       "\nCCC = ", round(trial_ccc_ARMD, 2),
-      " [", round(trial_ccc_ARMD_CI_perc[1], 2), ", ", round(trial_ccc_ARMD_CI_perc[2], 2), "]"
+      " [", round(trial_ccc_ARMD_CI_bca[1], 2), ", ", round(trial_ccc_ARMD_CI_bca[2], 2), "]"
     ),
     hjust = 0,
     vjust = 1,
@@ -242,7 +238,7 @@ rise_ccc_ARMD_boot <- boot(
   R = 2000
 )
 
-rise_ccc_ARMD_CI <- boot.ci(rise_ccc_ARMD_boot, type = c("bca", "perc"))
+rise_ccc_ARMD_CI <- boot.ci(rise_ccc_ARMD_boot, type = c("bca"))
 
 rise_ccc_ARMD_CI_bca <- c(
   lower = rise_ccc_ARMD_CI$bca[1, 4],
