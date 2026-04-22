@@ -4,6 +4,7 @@ library(ggplot2)
 library(dplyr)
 library(patchwork)
 library(fs)
+library(boot)
 
 application_figures_folder <- fs::path("output", "figures", "application", "main")
 
@@ -85,10 +86,8 @@ fit_full_ARMD <- BifixedContCont(
 )
 
 trial_R2_ARMD <- fit_full_ARMD$Trial.R2$`R2 Trial`
-trial_R_ARMD  <- fit_full_ARMD$Trial.R$`R Trial`
 
 cat("ARMD full-model trial-level R^2:", trial_R2_ARMD, "\n")
-cat("ARMD full-model trial-level R  :", trial_R_ARMD, "\n")
 
 trial_effects_ARMD <- fit_full_ARMD$Results.Stage.1 %>%
   transmute(
@@ -99,6 +98,31 @@ trial_effects_ARMD <- fit_full_ARMD$Results.Stage.1 %>%
   )
 
 trial_ccc_ARMD <- ccc_fun(trial_effects_ARMD$u.s, trial_effects_ARMD$u.y)
+
+# Bootstrap CI for CCC from the bivariate joint modelling trial-level effects
+ccc_stat_ARMD <- function(data, indices) {
+  d <- data[indices, ]
+  ccc_fun(d$u.s, d$u.y)
+}
+
+set.seed(123)
+trial_ccc_ARMD_boot <- boot(
+  data = trial_effects_ARMD,
+  statistic = ccc_stat_ARMD,
+  R = 2000
+)
+
+trial_ccc_ARMD_CI <- boot.ci(trial_ccc_ARMD_boot, type = c("bca", "perc"))
+
+trial_ccc_ARMD_CI_bca <- c(
+  lower = trial_ccc_ARMD_CI$bca[1, 4],
+  upper = trial_ccc_ARMD_CI$bca[1, 5]
+)
+
+trial_ccc_ARMD_CI_perc <- c(
+  lower = trial_ccc_ARMD_CI$perc[1, 4],
+  upper = trial_ccc_ARMD_CI$perc[1, 5]
+)
 
 plot.min.global_ARMD <- min(trial_effects_ARMD$u.s, trial_effects_ARMD$u.y) - 2
 
@@ -123,7 +147,12 @@ jointModel_plot_ARMD <- trial_effects_ARMD %>%
     "text",
     x = plot.min.global_ARMD,
     y = max(trial_effects_ARMD$u.y, na.rm = TRUE),
-    label = paste0("Trial R2 = ", round(trial_R2_ARMD, 2), "\nCCC = ", round(trial_ccc_ARMD, 2)),
+    label = paste0(
+      "Trial R2 = ", round(trial_R2_ARMD, 2),
+      " [", round(fit_full_ARMD$Trial.R2$`CI lower limit`, 2), ", ", round(fit_full_ARMD$Trial.R2$`CI upper limit`, 2), "]",
+      "\nCCC = ", round(trial_ccc_ARMD, 2),
+      " [", round(trial_ccc_ARMD_CI_perc[1], 2), ", ", round(trial_ccc_ARMD_CI_perc[2], 2), "]"
+    ),
     hjust = 0,
     vjust = 1,
     color = "red",
@@ -175,14 +204,50 @@ rise_fit_ARMD <- rise.screen.meta(
   meta.analysis.method = "RE"
 )
 
-ARMD_forest = rise_fit_ARMD$gamma.s.plot$forest.plot
-
-ARMD_forest
-
 gamma_df_ARMD <- rise_fit_ARMD[["screening.metrics.study"]]
 
 R2_rise_w_ARMD <- summary(lm(u.y ~ u.s, data = gamma_df_ARMD, weights = n))$r.squared
 rise_ccc_ARMD  <- ccc_fun(gamma_df_ARMD$u.s, gamma_df_ARMD$u.y)
+
+# Bootstrap CI for weighted R^2 from RISE-Meta
+r2_rise_w_stat_ARMD <- function(data, indices) {
+  d <- data[indices, ]
+  summary(lm(u.y ~ u.s, data = d, weights = n))$r.squared
+}
+
+set.seed(123)
+R2_rise_w_ARMD_boot <- boot(
+  data = gamma_df_ARMD,
+  statistic = r2_rise_w_stat_ARMD,
+  R = 2000
+)
+
+R2_rise_w_ARMD_CI <- boot.ci(R2_rise_w_ARMD_boot, type = c("bca"))
+
+R2_rise_w_ARMD_CI_bca <- c(
+  lower = R2_rise_w_ARMD_CI$bca[1, 4],
+  upper = R2_rise_w_ARMD_CI$bca[1, 5]
+)
+
+# Bootstrap CI for CCC from RISE-Meta trial-level effects
+rise_ccc_stat_ARMD <- function(data, indices) {
+  d <- data[indices, ]
+  ccc_fun(d$u.s, d$u.y)
+}
+
+set.seed(123)
+rise_ccc_ARMD_boot <- boot(
+  data = gamma_df_ARMD,
+  statistic = rise_ccc_stat_ARMD,
+  R = 2000
+)
+
+rise_ccc_ARMD_CI <- boot.ci(rise_ccc_ARMD_boot, type = c("bca", "perc"))
+
+rise_ccc_ARMD_CI_bca <- c(
+  lower = rise_ccc_ARMD_CI$bca[1, 4],
+  upper = rise_ccc_ARMD_CI$bca[1, 5]
+)
 
 riseMeta_plot_ARMD <- gamma_df_ARMD %>%
   ggplot(aes(x = u.s, y = u.y)) +
@@ -205,7 +270,12 @@ riseMeta_plot_ARMD <- gamma_df_ARMD %>%
     "text",
     x = -0.1,
     y = 1.05,
-    label = paste0("Trial R2 = ", round(R2_rise_w_ARMD, 2), "\nCCC = ", round(rise_ccc_ARMD, 2)),
+    label = paste0(
+      "Trial R2 = ", round(R2_rise_w_ARMD, 2),
+      " [", round(R2_rise_w_ARMD_CI_bca["lower"], 2), ", ", round(R2_rise_w_ARMD_CI_bca["upper"], 2), "]",
+      "\nCCC = ", round(rise_ccc_ARMD, 2),
+      " [", round(rise_ccc_ARMD_CI_bca["lower"], 2), ", ", round(rise_ccc_ARMD_CI_bca["upper"], 2), "]"
+    ),
     hjust = 0,
     vjust = 1,
     color = "red",
@@ -256,9 +326,6 @@ combined_plot_ARMD <-
     theme = theme(plot.title = element_text(size = 40, face = "bold", hjust = 0.5))
   )
 
-
-
-
 # ============================================================
 # Ovarian cancer
 # ============================================================
@@ -295,10 +362,8 @@ fit_full_Ovarian <- BifixedContCont(
 )
 
 trial_R2_Ovarian <- fit_full_Ovarian$Trial.R2$`R2 Trial`
-trial_R_Ovarian  <- fit_full_Ovarian$Trial.R$`R Trial`
 
 cat("Ovarian full-model trial-level R^2:", trial_R2_Ovarian, "\n")
-cat("Ovarian full-model trial-level R  :", trial_R_Ovarian, "\n")
 
 trial_effects_Ovarian <- fit_full_Ovarian$Results.Stage.1 %>%
   transmute(
@@ -309,6 +374,26 @@ trial_effects_Ovarian <- fit_full_Ovarian$Results.Stage.1 %>%
   )
 
 trial_ccc_Ovarian <- ccc_fun(trial_effects_Ovarian$u.s, trial_effects_Ovarian$u.y)
+
+# Bootstrap CI for CCC from the bivariate joint modelling trial-level effects
+ccc_stat_Ovarian <- function(data, indices) {
+  d <- data[indices, ]
+  ccc_fun(d$u.s, d$u.y)
+}
+
+set.seed(123)
+trial_ccc_Ovarian_boot <- boot(
+  data = trial_effects_Ovarian,
+  statistic = ccc_stat_Ovarian,
+  R = 2000
+)
+
+trial_ccc_Ovarian_CI <- boot.ci(trial_ccc_Ovarian_boot, type = c("bca"))
+
+trial_ccc_Ovarian_CI_bca <- c(
+  lower = trial_ccc_Ovarian_CI$bca[1, 4],
+  upper = trial_ccc_Ovarian_CI$bca[1, 5]
+)
 
 plot.min.global_Ovarian <- min(trial_effects_Ovarian$u.s, trial_effects_Ovarian$u.y) - 0.2
 
@@ -333,7 +418,12 @@ jointModel_plot_Ovarian <- trial_effects_Ovarian %>%
     "text",
     x = plot.min.global_Ovarian,
     y = max(trial_effects_Ovarian$u.y, na.rm = TRUE),
-    label = paste0("Trial R2 = ", round(trial_R2_Ovarian, 2), "\nCCC = ", round(trial_ccc_Ovarian, 2)),
+    label = paste0(
+      "Trial R2 = ", round(trial_R2_Ovarian, 2),
+      " [", round(fit_full_Ovarian$Trial.R2$`CI lower limit`, 2), ", ", round(fit_full_Ovarian$Trial.R2$`CI upper limit`, 2), "]",
+      "\nCCC = ", round(trial_ccc_Ovarian, 2),
+      " [", round(trial_ccc_Ovarian_CI_bca["lower"], 2), ", ", round(trial_ccc_Ovarian_CI_bca["upper"], 2), "]"
+    ),
     hjust = 0,
     vjust = 1,
     color = "red",
@@ -385,14 +475,50 @@ rise_fit_Ovarian <- rise.screen.meta(
   meta.analysis.method = "RE"
 )
 
-Ovarian_forest = rise_fit_Ovarian$gamma.s.plot$forest.plot
-
-Ovarian_forest
-
 gamma_df_Ovarian <- rise_fit_Ovarian[["screening.metrics.study"]]
 
 R2_rise_w_Ovarian <- summary(lm(u.y ~ u.s, data = gamma_df_Ovarian, weights = n))$r.squared
 rise_ccc_Ovarian  <- ccc_fun(gamma_df_Ovarian$u.s, gamma_df_Ovarian$u.y)
+
+# Bootstrap CI for weighted R^2 from RISE-Meta
+r2_rise_w_stat_Ovarian <- function(data, indices) {
+  d <- data[indices, ]
+  summary(lm(u.y ~ u.s, data = d, weights = n))$r.squared
+}
+
+set.seed(123)
+R2_rise_w_Ovarian_boot <- boot(
+  data = gamma_df_Ovarian,
+  statistic = r2_rise_w_stat_Ovarian,
+  R = 2000
+)
+
+R2_rise_w_Ovarian_CI <- boot.ci(R2_rise_w_Ovarian_boot, type = c("bca"))
+
+R2_rise_w_Ovarian_CI_bca <- c(
+  lower = R2_rise_w_Ovarian_CI$bca[1, 4],
+  upper = R2_rise_w_Ovarian_CI$bca[1, 5]
+)
+
+# Bootstrap CI for CCC from RISE-Meta trial-level effects
+rise_ccc_stat_Ovarian <- function(data, indices) {
+  d <- data[indices, ]
+  ccc_fun(d$u.s, d$u.y)
+}
+
+set.seed(123)
+rise_ccc_Ovarian_boot <- boot(
+  data = gamma_df_Ovarian,
+  statistic = rise_ccc_stat_Ovarian,
+  R = 2000
+)
+
+rise_ccc_Ovarian_CI <- boot.ci(rise_ccc_Ovarian_boot, type = c("bca"))
+
+rise_ccc_Ovarian_CI_bca <- c(
+  lower = rise_ccc_Ovarian_CI$bca[1, 4],
+  upper = rise_ccc_Ovarian_CI$bca[1, 5]
+)
 
 riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
   ggplot(aes(x = u.s, y = u.y)) +
@@ -415,7 +541,12 @@ riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
     "text",
     x = -0.1,
     y = 1.05,
-    label = paste0("Trial R2 = ", round(R2_rise_w_Ovarian, 2), "\nCCC = ", round(rise_ccc_Ovarian, 2)),
+    label = paste0(
+      "Trial R2 = ", round(R2_rise_w_Ovarian, 2),
+      " [", round(R2_rise_w_Ovarian_CI_bca["lower"], 2), ", ", round(R2_rise_w_Ovarian_CI_bca["upper"], 2), "]",
+      "\nCCC = ", round(rise_ccc_Ovarian, 2),
+      " [", round(rise_ccc_Ovarian_CI_bca["lower"], 2), ", ", round(rise_ccc_Ovarian_CI_bca["upper"], 2), "]"
+    ),
     hjust = 0,
     vjust = 1,
     color = "red",

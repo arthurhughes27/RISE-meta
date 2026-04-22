@@ -10,8 +10,9 @@ aggregate_to_geneset = function(df, genesets, geneset_names, FUN = mean) {
   
   out <- imap_dfc(genesets, function(genes, i) {
     present <- intersect(genes, colnames(df))
-    if (length(present) == 0)
+    if (length(present) == 0) {
       return(NULL)
+    }
     
     mat <- df[, present, drop = FALSE]
     vec <- apply(mat, 1, function(r)

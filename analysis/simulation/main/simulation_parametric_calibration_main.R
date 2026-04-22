@@ -170,6 +170,10 @@ p1 <- ggplot(results_plot, aes(
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
   labs(
     title = "Calibration plots across number of studies and sample sizes",
+    subtitle = expression(
+      "Max between-study variability = " * epsilon/10 *
+        ", max within-study variability = " * 100 * epsilon
+    ),
     x = "Nominal FPR",
     y = "Empirical FPR"
   ) +
@@ -184,6 +188,7 @@ p1 <- ggplot(results_plot, aes(
     strip.background = element_rect(fill = "grey80", color = NA),
     strip.text = element_text(size = 55),
     plot.title = element_text(size = 100, hjust = 0.5),
+    plot.subtitle = element_text(size = 60, hjust = 0.5),
     axis.title = element_text(size = 115),
     axis.text = element_text(size = 35)
   )
@@ -261,6 +266,7 @@ p2 <- ggplot(results_plot2, aes(
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "black") +
   labs(
     title = "Calibration plots across between- and within-study variability",
+    subtitle = paste0("Number of studies = number of samples = ", fixed_M),
     x = "Nominal FPR",
     y = "Empirical FPR"
   ) +
@@ -275,6 +281,7 @@ p2 <- ggplot(results_plot2, aes(
     strip.background = element_rect(fill = "grey80", color = NA),
     strip.text = element_text(size = 55),
     plot.title = element_text(size = 100, hjust = 0.5),
+    plot.subtitle = element_text(size = 60, hjust = 0.5),
     axis.title = element_text(size = 115),
     axis.text = element_text(size = 35)
   )
