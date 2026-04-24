@@ -129,7 +129,7 @@ jointModel_plot_ARMD <- trial_effects_ARMD %>%
     shape = 21,
     alpha = 0.5,
     stroke = 1,
-    fill = "#6FB1EF"
+    fill = "#BCBCBC"
   ) +
   geom_abline(
     slope = 1,
@@ -191,8 +191,8 @@ rise_fit_ARMD <- rise.screen.meta(
   studyone = Centerone_ARMD,
   studyzero = Centerzero_ARMD,
   alpha = 0.05,
-  epsilon.study = 0.2,
-  epsilon.meta = 0.2,
+  epsilon.study = 0.1,
+  epsilon.meta = 0.1,
   p.correction = "none",
   return.study.similarity.plot = FALSE,
   paired.all = FALSE,
@@ -252,7 +252,7 @@ riseMeta_plot_ARMD <- gamma_df_ARMD %>%
     shape = 21,
     alpha = 0.5,
     stroke = 1,
-    fill = "#6FB1EF"
+    fill = "#BCBCBC"
   ) +
   geom_abline(
     slope = 1,
@@ -400,7 +400,7 @@ jointModel_plot_Ovarian <- trial_effects_Ovarian %>%
     shape = 21,
     alpha = 0.5,
     stroke = 1,
-    fill = "#6FB1EF"
+    fill = "#BCBCBC"
   ) +
   geom_abline(
     slope = 1,
@@ -462,8 +462,8 @@ rise_fit_Ovarian <- rise.screen.meta(
   studyone = Centerone_Ovarian,
   studyzero = Centerzero_Ovarian,
   alpha = 0.05,
-  epsilon.study = 0.2,
-  epsilon.meta = 0.2,
+  epsilon.study = 0.1,
+  epsilon.meta = 0.1,
   p.correction = "none",
   return.study.similarity.plot = FALSE,
   paired.all = FALSE,
@@ -523,7 +523,7 @@ riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
     shape = 21,
     alpha = 0.5,
     stroke = 1,
-    fill = "#6FB1EF"
+    fill = "#BCBCBC"
   ) +
   geom_abline(
     slope = 1,
@@ -618,4 +618,4 @@ ggsave(
   units = "cm"
 )
 
-rm(list = ls())
+# rm(list = ls())
