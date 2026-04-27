@@ -19,7 +19,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "supplem
 simulation_results_folder = fs::path("output", "results", "simulation", "supplementary")
 
 # Number of independent markers to generate trial-level effects for
-J = 100000
+J = 1000000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.2
@@ -66,6 +66,21 @@ results_list <- vector("list", nrow(results))
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.
 seeds <- sample.int(n = .Machine$integer.max, size = nrow(results))
+
+# Add structure to skip for loop if results already exist
+output_file <- fs::path(simulation_results_folder,
+                        "simulation_parametric_calibration_trueMean.rds")
+
+if (file.exists(output_file)) {
+  message("Output already exists: skipping full simulation loop.")
+  results <- readRDS(output_file)
+  # optionally still load plots or downstream code
+  skip_loop <- TRUE
+} else {
+  skip_loop <- FALSE
+}
+
+if (!skip_loop) {
 
 for (i in seq_len(nrow(results))) {
   
@@ -131,8 +146,9 @@ results <- bind_rows(results_list)
 
 # Save results
 saveRDS(results, file = fs::path(simulation_results_folder, "simulation_parametric_calibration_trueMean.rds"))
-
-results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_calibration_trueMean.rds"))
+} else {
+  results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_calibration_trueMean.rds"))
+}
 
 fixed_alpha <- 0.05
 u_nu_max_fixed <- epsilon/10
@@ -184,6 +200,14 @@ x_labels <- function(x) {
   out
 }
 
+p2_cols <- rev(c(
+  "#7BD64A",
+  "#0B8500",
+  "#003309"
+))
+
+names(p2_cols) <- levels(plot_df$u_tau_max)
+
 p1 <- ggplot(plot_df, aes(
   x = invalid_mean_discrete,
   y = fpr,
@@ -199,18 +223,18 @@ p1 <- ggplot(plot_df, aes(
       ymax = Inf,
       fill = "Valid region"
     ),
-    alpha = 0.5,
+    alpha = 1,
     show.legend = TRUE
   ) +
   geom_line(
     data = plot_left,
     linewidth = 1.2,
-    alpha = 0.9
+    alpha = 0.6
   ) +
   geom_line(
     data = plot_right,
     linewidth = 1.2,
-    alpha = 0.9
+    alpha = 0.6
   ) +
   geom_point(size = 2, alpha = 0.5) +
   geom_hline(
@@ -226,13 +250,13 @@ p1 <- ggplot(plot_df, aes(
     alpha = 0.7
   ) +
   scale_color_manual(
-    values = scales::viridis_pal(option = "D")(length(levels(plot_df$u_tau_max))),
+    values = p2_cols,
     name = expression(paste("Max between-study variance")),
     labels = function(x) parse(text = rel_eps_text(x))
   ) +
   scale_fill_manual(
     name = NULL,
-    values = c("Valid region" = "#BCBCBC"),
+    values = c("Valid region" = "#C1C1C1"),
     labels = c(expression(paste("Valid region: ", -epsilon, " to ", epsilon)))
   ) +
   scale_x_continuous(
@@ -257,8 +281,8 @@ p1 <- ggplot(plot_df, aes(
     plot.title = element_text(size = 35, hjust = 0.5),
     panel.spacing = unit(3, "lines"),
     strip.background = element_rect(fill = "#f0f0f0", color = "black"),
-    strip.text = element_text(face = "bold", size = 25),
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 25),
+    axis.text.x = element_text(hjust = 1),
     axis.title = element_text(size = 35),
     legend.position = "right"
   ) +

@@ -19,7 +19,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "supplem
 simulation_results_folder = fs::path("output", "results", "simulation", "supplementary")
 
 # Number of independent markers to generate trial-level effects for
-J = 100000
+J = 1000000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
@@ -31,10 +31,12 @@ M_grid <- c(3, 10, 25)
 nm_grid = c(50)
 
 # Grid of maximum between-study variability values
-u_tau_max_vals <- c(epsilon/100, epsilon/10, epsilon, epsilon*10, epsilon*100)
+u_tau_max_vals <- c(epsilon / 100, epsilon / 10, epsilon, epsilon * 10, epsilon *
+                      100)
 
 # Grid of maximum within-study variability values
-u_nu_max_vals <- c(epsilon/100, epsilon/10, epsilon, epsilon*10, epsilon*100)
+u_nu_max_vals <- c(epsilon / 100, epsilon / 10, epsilon, epsilon * 10, epsilon *
+                     100)
 
 # Grid of alpha values for the calibration plot
 alpha_grid <- c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2, 0.5)
@@ -51,12 +53,12 @@ results <- expand.grid(
   nm = nm_grid,
   u_tau_max = u_tau_max_vals,
   u_nu_max = u_nu_max_vals,
-  model_specification = model_specification_grid, 
+  model_specification = model_specification_grid,
   test = test_grid,
   stringsAsFactors = FALSE
 )
 
-results = results %>% 
+results = results %>%
   filter(!(model_specification == "FE" & test == "knha"))
 
 # Initialise list for storage
@@ -66,69 +68,97 @@ results_list <- vector("list", nrow(results))
 # fully reproducible regardless of iteration order or future code changes.
 seeds <- sample.int(n = .Machine$integer.max, size = nrow(results))
 
-for (i in seq_len(nrow(results))) {
-  
-  M <- results$M[i]
-  sample_sizes <- rep(results$nm[i], M)
-  u_tau_max <- results$u_tau_max[i]
-  u_nu_max <- results$u_nu_max[i]
-  model_specification = results$model_specification[i]
-  test = results$test[i]
-  
-  # --- DATA GENERATION ---
-  data <- generate.example.data.highdim.multistudy(
-    epsilon = epsilon,
-    M = M,
-    sample_sizes = sample_sizes,
-    J = J,
-    prop_valid = 0, # 0% valid surrogates
-    u_tau_min = 0,
-    u_tau_max = u_tau_max,
-    u_nu_min = 0,
-    u_nu_max = u_nu_max,
-    prop_invalid_under = 0.5,
-    invalid_at_boundary = TRUE,
-    seed = seeds[i]
-  )
-  
-  # Storage for p-values
-  p_vals <- numeric(J)
-  
-  for (j in seq_len(J)) { # For each marker
-    resj <- delta.reml.meta(
-      delta = data$delta[, j],
-      sd.delta = data$sd.delta[, j],
-      epsilon = epsilon,
-      alternative = "two.sided",
-      test = test,
-      meta.analysis.method = model_specification
-    )
-    p_vals[j] <- resj$results$p
-  }
-  
-  # Derive FPR for each value of alpha
-  fpr_vec <- colMeans(outer(p_vals, alpha_grid, "<"), na.rm = TRUE)
-  
-  # Store results 
-  results_list[[i]] <- tibble(
-    M = M,
-    nm = results$nm[i],
-    u_tau_max = u_tau_max,
-    u_nu_max = u_nu_max,
-    test = test,
-    meta.analysis.method = model_specification,
-    alpha = alpha_grid,
-    fpr = fpr_vec
-  )
+# Add structure to skip for loop if results already exist
+output_file <- fs::path(simulation_results_folder,
+                        "simulation_parametric_calibration_metaAnalysisModel.rds")
+
+if (file.exists(output_file)) {
+  message("Output already exists: skipping full simulation loop.")
+  results <- readRDS(output_file)
+  # optionally still load plots or downstream code
+  skip_loop <- TRUE
+} else {
+  skip_loop <- FALSE
 }
 
-# Extract results into a dataframe
-results <- bind_rows(results_list)
-
-# Save results
-saveRDS(results, file = fs::path(simulation_results_folder, "simulation_parametric_calibration_metaAnalysisModel.rds"))
-
-results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_calibration_metaAnalysisModel.rds"))
+if (!skip_loop) {
+  for (i in seq_len(nrow(results))) {
+    M <- results$M[i]
+    sample_sizes <- rep(results$nm[i], M)
+    u_tau_max <- results$u_tau_max[i]
+    u_nu_max <- results$u_nu_max[i]
+    model_specification = results$model_specification[i]
+    test = results$test[i]
+    
+    # --- DATA GENERATION ---
+    data <- generate.example.data.highdim.multistudy(
+      epsilon = epsilon,
+      M = M,
+      sample_sizes = sample_sizes,
+      J = J,
+      prop_valid = 0,
+      # 0% valid surrogates
+      u_tau_min = 0,
+      u_tau_max = u_tau_max,
+      u_nu_min = 0,
+      u_nu_max = u_nu_max,
+      prop_invalid_under = 0.5,
+      invalid_at_boundary = TRUE,
+      seed = seeds[i]
+    )
+    
+    # Storage for p-values
+    p_vals <- numeric(J)
+    
+    for (j in seq_len(J)) {
+      # For each marker
+      resj <- delta.reml.meta(
+        delta = data$delta[, j],
+        sd.delta = data$sd.delta[, j],
+        epsilon = epsilon,
+        alternative = "two.sided",
+        test = test,
+        meta.analysis.method = model_specification
+      )
+      p_vals[j] <- resj$results$p
+    }
+    
+    # Derive FPR for each value of alpha
+    fpr_vec <- colMeans(outer(p_vals, alpha_grid, "<"), na.rm = TRUE)
+    
+    # Store results
+    results_list[[i]] <- tibble(
+      M = M,
+      nm = results$nm[i],
+      u_tau_max = u_tau_max,
+      u_nu_max = u_nu_max,
+      test = test,
+      meta.analysis.method = model_specification,
+      alpha = alpha_grid,
+      fpr = fpr_vec
+    )
+  }
+  
+  # Extract results into a dataframe
+  results <- bind_rows(results_list)
+  
+  # Save results
+  saveRDS(
+    results,
+    file = fs::path(
+      simulation_results_folder,
+      "simulation_parametric_calibration_metaAnalysisModel.rds"
+    )
+  )
+  
+} else {
+  results = readRDS(
+    fs::path(
+      simulation_results_folder,
+      "simulation_parametric_calibration_metaAnalysisModel.rds"
+    )
+  )
+}
 
 # Fixed scenario for this figure
 fixed_alpha <- 0.05
@@ -150,11 +180,9 @@ rel_eps_text <- function(x, eps = epsilon) {
   out
 }
 
-row_labs <- c(
-  "FE / z"     = "FE",
-  "RE / z"     = "RE / conventional",
-  "RE / knha"  = "RE / HKSJ"
-)
+row_labs <- c("FE / z"     = "FE",
+              "RE / z"     = "RE / conventional",
+              "RE / knha"  = "RE / HKSJ")
 
 plot_df <- results %>%
   filter(alpha == fixed_alpha) %>%
@@ -168,12 +196,17 @@ plot_df <- results %>%
 
 ylim = max(plot_df$fpr)
 
-p1 <- ggplot(plot_df, aes(
-  x = u_tau_max,
-  y = fpr,
-  color = u_nu_max,
-  group = u_nu_max
-)) +
+p2_cols <- rev(c("#6954F2", "#7400E0", "#BA00CF", "#BD0087", "#AB0039"))
+
+names(p2_cols) <- levels(plot_df$u_nu_max)
+
+p1 <- ggplot(plot_df,
+             aes(
+               x = u_tau_max,
+               y = fpr,
+               color = u_nu_max,
+               group = u_nu_max
+             )) +
   geom_line(size = 1.2, alpha = 0.65) +
   geom_point(size = 3, alpha = 0.65) +
   facet_grid(
@@ -181,16 +214,19 @@ p1 <- ggplot(plot_df, aes(
     cols = vars(M),
     labeller = labeller(
       model_row = as_labeller(row_labs),
-      M = function(x) paste("M =", x)
+      M = function(x)
+        paste("M =", x)
     )
   ) +
   scale_x_discrete(
-    labels = function(x) parse(text = rel_eps_text(x))
+    labels = function(x)
+      parse(text = rel_eps_text(x))
   ) +
   scale_color_manual(
-    values = scales::viridis_pal(option = "D")(length(unique(plot_df$u_nu_max))),
+    values = p2_cols,
     name = expression("Max within-study variance"),
-    labels = function(x) parse(text = rel_eps_text(x))
+    labels = function(x)
+      parse(text = rel_eps_text(x))
   ) +
   ylim(0, ylim) +
   geom_hline(
@@ -209,7 +245,7 @@ p1 <- ggplot(plot_df, aes(
     plot.title = element_text(size = 26, hjust = 0.5),
     panel.spacing = unit(3, "lines"),
     strip.background = element_rect(fill = "#f0f0f0", color = "black"),
-    strip.text = element_text(face = "bold", size = 16),
+    strip.text = element_text(size = 16),
     axis.text.x = element_text(angle = 45, hjust = 1),
     axis.title = element_text(size = 35),
     legend.position = "right"

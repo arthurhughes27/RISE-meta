@@ -19,7 +19,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "supplem
 simulation_results_folder = fs::path("output", "results", "simulation", "supplementary")
 
 # Number of independent markers to generate trial-level effects for
-J = 100000
+J = 1000000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.2
@@ -66,6 +66,21 @@ results_list <- vector("list", nrow(results))
 # Pre-generate seeds for each replicate from the master RNG so results are
 # fully reproducible regardless of iteration order or future code changes.
 seeds <- sample.int(n = .Machine$integer.max, size = nrow(results))
+
+# Add structure to skip for loop if results already exist
+output_file <- fs::path(simulation_results_folder,
+                        "simulation_parametric_power_trueMean.rds")
+
+if (file.exists(output_file)) {
+  message("Output already exists: skipping full simulation loop.")
+  results <- readRDS(output_file)
+  # optionally still load plots or downstream code
+  skip_loop <- TRUE
+} else {
+  skip_loop <- FALSE
+}
+
+if (!skip_loop) {
 
 for (i in seq_len(nrow(results))) {
   
@@ -131,8 +146,11 @@ results <- bind_rows(results_list)
 
 # Save results
 saveRDS(results, file = fs::path(simulation_results_folder, "simulation_parametric_power_trueMean.rds"))
+} else {
 
 results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_power_trueMean.rds"))
+
+}
 
 u_nu_max_fixed = epsilon/10
 u_tau_max_fixed = epsilon/10
@@ -151,6 +169,12 @@ x_labels <- c(
   expression(epsilon)
 )
 
+p2_cols <- c(
+  "#FF7575",
+  "#AB000E",
+  "#570010"
+)
+
 p1 <- ggplot(results, aes(
   x = valid_mean_discrete,
   y = tpr,
@@ -159,7 +183,7 @@ p1 <- ggplot(results, aes(
 )) +
   geom_line(linewidth = 1, alpha = 0.8) +
   geom_point(size = 2, alpha = 0.5) +
-  labs(title = "Empirical power as a function of distribution mean by number of studies",
+  labs(title = "Empirical power as a function of distribution mean",
        x = expression(mu),
        y = "Empirical Power",
        color = "Number of studies"
@@ -168,6 +192,10 @@ p1 <- ggplot(results, aes(
     breaks = x_breaks,
     labels = x_labels
   ) +
+  scale_color_manual(
+    values = p2_cols,
+    name = "Number of studies"
+  ) + 
   scale_y_continuous(labels = scales::label_percent(accuracy = 1)) +
   theme_minimal(base_size = 20) +
   theme(
