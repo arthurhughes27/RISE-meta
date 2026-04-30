@@ -89,12 +89,12 @@ Expected filenames:
 ### Gene set data
 
 - **Blood Transcriptional Modules (BTMs)**
-  https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets
-  File: `BTM_for_GSEA_20131008.gmt`
+  - https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets
+  - File: `BTM_for_GSEA_20131008.gmt`
 
 - **BloodGen3 Modules (BG3M)**
-  DOI: 10.1093/bioinformatics/btab121
-  File: `Suppl_File_1_BIOINF.xls`
+  - DOI: 10.1093/bioinformatics/btab121
+  - File: `Suppl_File_1_BIOINF.xls`
 
 ---
 
