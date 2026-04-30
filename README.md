@@ -278,32 +278,29 @@ after loading all the libraries necessary for this repository.
 ### Attached packages
 
 ```
-knitr_1.51          kableExtra_1.4.0    digest_0.6.39       viridis_0.6.5
-viridisLite_0.4.3   scales_1.4.0        janitor_2.2.1       Biobase_2.70.0
-BiocGenerics_0.56.0 generics_0.1.4      readxl_1.4.5        GSA_1.03.3
-renv_1.2.2          Surrogate_3.4.1     patchwork_1.3.2     boot_1.3-32
-lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.2
-readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.3
-tidyverse_2.0.0     SurrogateRank_3.0   dplyr_1.2.1         fs_2.1.0
+knitr_1.51          kableExtra_1.4.0    digest_0.6.39       viridis_0.6.5       viridisLite_0.4.3  
+scales_1.4.0        janitor_2.2.1       Biobase_2.70.0      BiocGenerics_0.56.0 generics_0.1.4     
+readxl_1.4.5        GSA_1.03.3          Surrogate_3.4.1     patchwork_1.3.2     boot_1.3-32        
+lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.2         readr_2.2.0        
+tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.3       tidyverse_2.0.0     SurrogateRank_3.0  
+dplyr_1.2.1         renv_1.2.2          fs_2.1.0
 ```
 
 ### Packages loaded via namespace
 
 ```
-gtable_0.3.6        xfun_0.57           lattice_0.22-9      tzdb_0.5.0
-vctrs_0.7.3         tools_4.5.3         Rdpack_2.6.6        parallel_4.5.3
-sandwich_3.1-1      pbmcapply_1.5.1     pkgconfig_2.0.3     Matrix_1.7-5
-RColorBrewer_1.1-3  S7_0.2.2            lifecycle_1.0.5     compiler_4.5.3
-farver_2.1.2        textshaping_1.0.5   maxLik_1.5-2.2      snakecase_0.11.1
-htmltools_0.5.9     pillar_1.11.1       nloptr_2.2.1        MASS_7.3-65
-reformulas_0.4.4    nlme_3.1-169        tidyselect_1.2.1    stringi_1.8.7
-splines_4.5.3       miscTools_0.6-30    fastmap_1.2.0       grid_4.5.3
-cli_3.6.6           magrittr_2.0.5      survival_3.8-6      withr_3.0.2
-timechange_0.4.0    rmarkdown_2.31      lme4_2.0-1          gridExtra_2.3
-cellranger_1.1.0    zoo_1.8-15          hms_1.1.4           evaluate_1.0.5
-rbibutils_2.4.1     rlang_1.2.0         Rcpp_1.1.1          glue_1.8.1
-xml2_1.5.2          BiocManager_1.30.27 svglite_2.2.2       rstudioapi_0.18.0
-minqa_1.2.8         R6_2.6.1            systemfonts_1.3.2
+tidyselect_1.2.1    farver_2.1.2        S7_0.2.2            fastmap_1.2.0       timechange_0.4.0   
+lifecycle_1.0.5     survival_3.8-6      magrittr_2.0.5      compiler_4.5.3      rlang_1.2.0        
+tools_4.5.3         xml2_1.5.2          RColorBrewer_1.1-3  withr_3.0.2         grid_4.5.3         
+colorspace_2.1-2    MASS_7.3-65         cli_3.6.6           rmarkdown_2.31      miscTools_0.6-30   
+reformulas_0.4.4    rstudioapi_0.18.0   tzdb_0.5.0          minqa_1.2.8         splines_4.5.3      
+BiocManager_1.30.27 cellranger_1.1.0    vctrs_0.7.3         Matrix_1.7-5        sandwich_3.1-1     
+hms_1.1.4           pbmcapply_1.5.1     systemfonts_1.3.2   glue_1.8.1          ggVennDiagram_1.5.7
+nloptr_2.2.1        cowplot_1.2.0       stringi_1.8.7       gtable_0.3.6        lme4_2.0-1         
+ComplexUpset_1.3.3  pillar_1.11.1       htmltools_0.5.9     R6_2.6.1            maxLik_1.5-2.2     
+textshaping_1.0.5   Rdpack_2.6.6        evaluate_1.0.5      lattice_0.22-9      rbibutils_2.4.1    
+snakecase_0.11.1    Rcpp_1.1.1-1.1      svglite_2.2.2       gridExtra_2.3       nlme_3.1-169       
+xfun_0.57           zoo_1.8-15          pkgconfig_2.0.3 
 ```
 
 Full version details are recorded in `renv.lock`. Run `renv::restore()` to reproduce the exact package environment.
