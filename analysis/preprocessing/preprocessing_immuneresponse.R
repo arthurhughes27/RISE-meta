@@ -20,9 +20,8 @@ raw_data_folder = "data-raw"
 processed_data_folder = "data"
 
 # Use fs::path() to specify the data paths robustly
-p_load_elisa <- fs::path(raw_data_folder, "elisa_2025-01-10_01-14-21.xlsx")
-p_load_nAb <- fs::path(raw_data_folder, "neut_ab_titer_2025-01-10_01-13-22.xlsx")
-p_load_hai <- fs::path(raw_data_folder, "hai_2025-01-10_01-13-41.xlsx")
+p_load_nAb <- fs::dir_ls(raw_data_folder, regexp = "neut_ab_titer.*\\.xlsx$")
+p_load_hai <- fs::dir_ls(raw_data_folder, regexp = "hai.*\\.xlsx$")
 p_load_clinical <- fs::path(processed_data_folder, "hipc_clinical.rds")
 
 # HAI response data

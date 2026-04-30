@@ -3,7 +3,10 @@
 # Script to ensure project structure is in place
 source(fs::path("analysis", "create_project_structure.R"))
 
-# Restore software and package environment
+# Install and use `renv` package to restore software environment
+if (!requireNamespace(renv, quietly = TRUE)) {
+  install.packages(renv)
+}
 renv::restore()
 
 # Master script for preprocessing files
