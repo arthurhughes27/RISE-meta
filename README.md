@@ -7,23 +7,24 @@ The methodology is described in the paper *Meta-Analysis of High-Dimensional Sur
 ## Quick start
 
 1. Clone this repository.
-2. Download the required raw data (described below) and place it in `data-raw/`.
-3. Create the required project structure:
+2. Ensure the required project structure:
 ```r
 source("analysis/create_project_structure.R")
 ```
+3. Download the raw data (described below) and place it in `data-raw/`.
 4. Install dependencies and recreate software environment
 ```r
 renv::restore()
 ```
-5. Run the full pipeline:
+5. Run the full analysis pipeline:
 ```r
 source("analysis/analysis_master.R")
 ```
+Note that due to extensive simulations, this may take a long time (see Runtime information section below). 
 
 ---
 
-### Reproducing the software environment
+## Reproducing the software environment
 
 This repository uses [`renv`](https://rstudio.github.io/renv/) for package management. To restore the exact package versions used in this analysis:
 
@@ -40,6 +41,7 @@ The complete package environment is recorded in `renv.lock`.
 No raw or processed data is stored in this repository.
 
 To run the project:
+
 1. Download required raw data (see below)
 2. Place all files in `data-raw/`
 3. Run scripts in `analysis/`
@@ -48,10 +50,7 @@ To run the project:
 
 ### Low-dimensional application
 
-Data is accessed via the **Surrogate** R package:
-```r
-install.packages("Surrogate")
-```
+Data is accessed via the **Surrogate** R package which is installed when using `renv::restore()`.
 
 ---
 
@@ -66,6 +65,7 @@ install.packages("Surrogate")
 5. Open **Clinical and Assay Data**
 
 Download:
+
 - `all_noNorm_eset.rds`
 
 From the **Assay** section download:
@@ -73,12 +73,14 @@ From the **Assay** section download:
 - Hemagglutination inhibition (HAI)
 
 Export each as:
+
 1. Click dataset
 2. Click **Export**
 3. Select **Excel Workbook (.xlsx)**
 4. Download file
 
 Expected filenames:
+
 - `neut_ab_titer_2025-01-10_01-13-22.xlsx`
 - `hai_2025-01-10_01-13-41.xlsx`
 
@@ -134,12 +136,16 @@ source("analysis/analysis_master.R")
 ```
 
 Runs:
-- package installation
+
+- package installation and software environment reproduction
 - project folder structure
 - preprocessing
 - descriptive analysis
 - real-data application
-- simulation study (may take several days)
+- simulation study 
+
+*NOTE: * due to the extensive number of simulations performed, running the simulation files may take several hours or even days.
+See the *Runtime information* section below for details and suggestions. 
 
 ---
 
@@ -150,6 +156,7 @@ source("analysis/preprocessing/preprocessing_master.R")
 ```
 
 Steps:
+
 - clinical data preprocessing
 - gene expression preprocessing
 - immune response preprocessing
@@ -162,15 +169,19 @@ Outputs of preprocessing go in `data/`
 
 ### Descriptive analysis
 
+Runs descriptive analyses of the data and produces two supplementary figures.
+
 ```r
 source("analysis/descriptive/descriptive_master.R")
 ```
 
 Outputs:
-- visual description of dataset
-- data for flowchart of samples after each preprocessing step
+
+- visual description of dataset (Web Figure 1)
+- data for flowchart of samples after each preprocessing step (Web Figure 2)
 
 Saved in:
+
 - `output/results/descriptive/`
 - `output/figures/descriptive/`
 
@@ -178,38 +189,75 @@ Saved in:
 
 ### Application
 
+Runs main and supplementary analyses on real data. 
+
 ```r
 source("analysis/application/application_master.R")
 ```
+Outputs: 
+
+- Low-dimensional data application (Figure 3)
+- High-dimensional data application (Figures 3, 4)
+- Supplementary analyses (Supplementary Web Figures 9-13)
 
 Saved in:
+
 - `output/figures/application/`
 
 ---
 
 ### Simulation
 
+Runs scripts to produce simulation results. 
+
 ```r
 source("analysis/simulation/simulation_master.R")
 ```
 
+Outputs: 
+
+- Main simulation results (Figures 1, 2) 
+- Supplementary simulation results (Web Figures 4-8)
+
 Saved in:
-- `output/results/simulation/`
-- `output/figures/simulation/`
+
+- `output/results/simulation/` (raw results data)
+- `output/figures/simulation/` (figures)
+
+--- 
+
+## Runtime information
+
+The full analysis pipeline takes roughly 1 day on a standard laptop, e.g. one with specs similar to:
+
+- Dell Inc. Precision 5470 
+- 12th Gen Intel® Core™ i7-12700H processor × 20 cores
+- 16GB RAM
+
+However, the grand majority of this computational time is taken by the simulation study. 
+When excluding the simulation study from the `analysis_master.R` script, the runtime reduces to around 5 minutes. 
+
+To reduce this computational time, one may reduce the number of repetitions in the simulation studies. 
+In the simulation files, these are controlled by the variable `J`, which is set to 100,000. To reduce this, you
+may replace this with a smaller number. 
+In RStudio, on default key bindings this can be achieved by 
+
+- pressing `Ctrl+Shift+F` (find in files)
+- typing exactly `J = 100000` and clicking "find"
+- clicking "Replace" in the "Find in Files" window
+- typing e.g. `J = 10000` and clicking "Replace All"
+- Running the master script
 
 ---
 
-## Citation
+## Parallelisation
 
-The methodology is described in:
+Parallel computing has been used to render some parts of the analysis quicker. 
+By default, we detect the number of cores on the user's hardware using `parallel::detectCores()` use half of the available cores. 
+To increase or decrease this (e.g. if your RStudio crashes when trying to run the analysis), simply replace the line 
+`n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2` with e.g. `n.cores = 1` using the Find in Files approach described above. 
 
-*Meta-Analysis of High-Dimensional Surrogate Markers*
-
-and implemented in the R package SurrogateRank.
-
-(arXiv preprint coming soon)
-
---- 
+---
 
 ## Software and version information
 
@@ -226,7 +274,6 @@ after loading all the libraries necessary for this repository.
 - **OS:** Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu)
 - **R version:** 4.5.3 (2026-03-11)
 - **BLAS/LAPACK:** OpenBLAS (LAPACK version 3.12.0)
-- **Time zone:** Europe/Paris
 
 ### Attached packages
 
@@ -259,4 +306,16 @@ xml2_1.5.2          BiocManager_1.30.27 svglite_2.2.2       rstudioapi_0.18.0
 minqa_1.2.8         R6_2.6.1            systemfonts_1.3.2
 ```
 
-> Full version details are recorded in `renv.lock`. Run `renv::restore()` to reproduce the exact package environment.
+Full version details are recorded in `renv.lock`. Run `renv::restore()` to reproduce the exact package environment.
+
+---
+
+## Citation
+
+The methodology is described in:
+
+*Meta-Analysis of High-Dimensional Surrogate Markers*
+
+and implemented in the R package SurrogateRank.
+
+(arXiv preprint coming soon)

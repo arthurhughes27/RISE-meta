@@ -1,5 +1,10 @@
 # Script to run the main analysis for the paper : Meta-Analytic Evaluation of High-Dimensional Surrogate Markers : Application to vaccinology
 
+# Libraries
+library(tidyverse)
+library(SurrogateRank)
+library(parallel)
+
 # Define global hyperparameters for analysis
 hyperparameter_list = list(
   # Hyperparameters for data pre-processing
@@ -69,7 +74,7 @@ hyperparameter_list = list(
   # Argument stating the definition of the genesets (options are BTM or BG3M)
   
   # Other hyperparameters
-  n.cores = 5,
+  n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2,
   # number of cores for parallel computing
   screen.plot.topN = 20, # how many predictors to plot
   screen.plot.point.estimate = F,
@@ -94,11 +99,6 @@ file_name_tag = paste0("_timepoint",
                        ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
                           paste0("_eps", hyperparameter_list$epsilon.meta), 
                           paste0("_power", hyperparameter_list$power.want.s.study)))
-
-
-# Libraries
-library(tidyverse)
-library(SurrogateRank)
 
 # Load internal functions
 sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)

@@ -356,58 +356,39 @@ display: none;
 <h1>RISE-Meta</h1>
 <p>Repository for the development and implementation of the
 <strong>Rank-Based Identification of High-Dimensional Surrogate Markers
-Meta-Analysis (RISE-Meta)</strong> method.</p>
-<p>The methodology is described in the paper <em>Meta-Analysis of
-High-Dimensional Surrogate Markers</em>, available soon on arXiv.</p>
+Meta-Analysis (RISE-Meta)</strong> method. The methodology is described
+in the paper <em>Meta-Analysis of High-Dimensional Surrogate
+Markers</em>, available soon on arXiv.</p>
 <hr />
 <div id="quick-start" class="section level2">
 <h2>Quick start</h2>
 <ol style="list-style-type: decimal">
 <li>Clone this repository.</li>
-<li>Download the required raw data and place it in
-<code>data-raw/</code>.</li>
-<li>Create the project structure:</li>
+<li>Ensure the required project structure:</li>
 </ol>
 <pre class="r"><code>source(&quot;analysis/create_project_structure.R&quot;)</code></pre>
-<ol start="4" style="list-style-type: decimal">
-<li>Install required packages:</li>
+<ol start="3" style="list-style-type: decimal">
+<li>Download the raw data (described below) and place it in
+<code>data-raw/</code>.</li>
+<li>Install dependencies and recreate software environment</li>
 </ol>
-<pre class="r"><code>source(&quot;analysis/install_dependencies.R&quot;)</code></pre>
+<pre class="r"><code>renv::restore()</code></pre>
 <ol start="5" style="list-style-type: decimal">
-<li>Run the full pipeline:</li>
+<li>Run the full analysis pipeline:</li>
 </ol>
 <pre class="r"><code>source(&quot;analysis/analysis_master.R&quot;)</code></pre>
+<p>Note that due to extensive simulations, this may take a long time
+(see Runtime information section below).</p>
 <hr />
 </div>
-<div id="requirements" class="section level2">
-<h2>Requirements</h2>
-<p>The following R packages are required:</p>
-<ul>
-<li>Biobase</li>
-<li>digest</li>
-<li>dplyr</li>
-<li>forcats</li>
-<li>fs</li>
-<li>ggplot2</li>
-<li>GSA</li>
-<li>janitor</li>
-<li>kableExtra</li>
-<li>knitr</li>
-<li>patchwork</li>
-<li>purrr</li>
-<li>readr</li>
-<li>readxl</li>
-<li>scales</li>
-<li>stringr</li>
-<li>Surrogate</li>
-<li>SurrogateRank</li>
-<li>tibble</li>
-<li>tidyr</li>
-<li>tidyverse</li>
-<li>viridis</li>
-</ul>
-<p>Install them with:</p>
-<pre class="r"><code>source(&quot;analysis/install_dependencies.R&quot;)</code></pre>
+<div id="reproducing-the-software-environment" class="section level2">
+<h2>Reproducing the software environment</h2>
+<p>This repository uses <a href="https://rstudio.github.io/renv/"><code>renv</code></a> for package
+management. To restore the exact package versions used in this
+analysis:</p>
+<pre class="r"><code>renv::restore()</code></pre>
+<p>The complete package environment is recorded in
+<code>renv.lock</code>.</p>
 <hr />
 </div>
 <div id="data-access" class="section level2">
@@ -422,8 +403,8 @@ High-Dimensional Surrogate Markers</em>, available soon on arXiv.</p>
 <hr />
 <div id="low-dimensional-application" class="section level3">
 <h3>Low-dimensional application</h3>
-<p>Data is accessed via the <strong>Surrogate</strong> R package:</p>
-<pre class="r"><code>install.packages(&quot;Surrogate&quot;)</code></pre>
+<p>Data is accessed via the <strong>Surrogate</strong> R package which
+is installed when using <code>renv::restore()</code>.</p>
 <hr />
 </div>
 <div id="high-dimensional-application" class="section level3">
@@ -431,34 +412,23 @@ High-Dimensional Surrogate Markers</em>, available soon on arXiv.</p>
 <div id="immunespace-data" class="section level4">
 <h4>ImmuneSpace data</h4>
 <ol style="list-style-type: decimal">
-<li>Go to <a href="https://immunespace.org" class="uri">https://immunespace.org</a><br />
-</li>
-<li>Click <strong>Resources → Immune Signature Projects</strong><br />
-</li>
-<li>Open <strong>Project 2</strong> (Immune Signatures 2)<br />
-</li>
-<li>Click <strong>Proceed to study data</strong> (account
-required)<br />
-</li>
+<li>Go to <a href="https://immunespace.org" class="uri">https://immunespace.org</a></li>
+<li>Click <strong>Resources → Immune Signature Projects</strong></li>
+<li>Open <strong>Project 2</strong> (Immune Signatures 2)</li>
+<li>Click <strong>Proceed to study data</strong> (account required)</li>
 <li>Open <strong>Clinical and Assay Data</strong></li>
 </ol>
 <p>Download:</p>
 <ul>
 <li><code>all_noNorm_eset.rds</code></li>
 </ul>
-<p>From the <strong>Assay</strong> section download:</p>
-<ul>
-<li>Neutralizing antibody titer</li>
-<li>Hemagglutination inhibition (HAI)</li>
-</ul>
+<p>From the <strong>Assay</strong> section download: - Neutralizing
+antibody titer - Hemagglutination inhibition (HAI)</p>
 <p>Export each as:</p>
 <ol style="list-style-type: decimal">
-<li>Click dataset<br />
-</li>
-<li>Click <strong>Export</strong><br />
-</li>
-<li>Select <strong>Excel Workbook (.xlsx)</strong><br />
-</li>
+<li>Click dataset</li>
+<li>Click <strong>Export</strong></li>
+<li>Select <strong>Excel Workbook (.xlsx)</strong></li>
 <li>Download file</li>
 </ol>
 <p>Expected filenames:</p>
@@ -472,12 +442,11 @@ required)<br />
 <div id="gene-set-data" class="section level3">
 <h3>Gene set data</h3>
 <ul>
-<li><p><strong>Blood Transcriptional Modules (BTMs)</strong><br />
-<a href="https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets" class="uri">https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets</a><br />
+<li><p><strong>Blood Transcriptional Modules (BTMs)</strong> <a href="https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets" class="uri">https://github.com/shuzhao-li/BTM/tree/master/BTM/datasets</a>
 File: <code>BTM_for_GSEA_20131008.gmt</code></p></li>
-<li><p><strong>BloodGen3 Modules (BG3M)</strong><br />
-DOI: 10.1093/bioinformatics/btab121<br />
-File: <code>Suppl_File_1_BIOINF.xls</code></p></li>
+<li><p><strong>BloodGen3 Modules (BG3M)</strong> DOI:
+10.1093/bioinformatics/btab121 File:
+<code>Suppl_File_1_BIOINF.xls</code></p></li>
 </ul>
 <hr />
 </div>
@@ -485,28 +454,24 @@ File: <code>Suppl_File_1_BIOINF.xls</code></p></li>
 <div id="project-structure" class="section level2">
 <h2>Project structure</h2>
 <ul>
-<li><p><code>data-raw/</code><br />
-Raw data files (not stored in this repository)</p></li>
-<li><p><code>data/</code><br />
-Processed data (not stored in this repository)</p></li>
-<li><p><code>R/</code><br />
-Helper functions</p></li>
-<li><p><code>analysis/</code><br />
-Analysis scripts:</p>
+<li><p><code>data-raw/</code> Raw data files (not stored in this
+repository)</p></li>
+<li><p><code>data/</code> Processed data (not stored in this
+repository)</p></li>
+<li><p><code>R/</code> Helper functions</p></li>
+<li><p><code>analysis/</code> Analysis scripts:</p>
 <ul>
 <li>preprocessing</li>
 <li>descriptive</li>
 <li>application</li>
 <li>simulation</li>
 </ul></li>
-<li><p><code>output/</code><br />
-Outputs (not stored in this repository):</p>
+<li><p><code>output/</code> Outputs (not stored in this repository):</p>
 <ul>
 <li><code>results/</code></li>
 <li><code>figures/</code></li>
 </ul></li>
-<li><p><code>manuscript/</code><br />
-Manuscript-related files:</p>
+<li><p><code>manuscript/</code> Manuscript-related files:</p>
 <ul>
 <li><code>diagrams/</code> manually created figures</li>
 </ul></li>
@@ -520,12 +485,17 @@ Manuscript-related files:</p>
 <pre class="r"><code>source(&quot;analysis/analysis_master.R&quot;)</code></pre>
 <p>Runs:</p>
 <ul>
-<li>package installation</li>
+<li>package installation and software environment reproduction</li>
+<li>project folder structure</li>
 <li>preprocessing</li>
 <li>descriptive analysis</li>
 <li>real-data application</li>
-<li>simulation study (may take several days)</li>
+<li>simulation study</li>
 </ul>
+<p><em>NOTE: </em> due to the extensive number of simulations performed,
+running the simulation files may take several hours or even days. See
+the <em>Runtime information</em> section below for details and
+suggestions.</p>
 <hr />
 </div>
 <div id="preprocessing" class="section level3">
@@ -539,16 +509,19 @@ Manuscript-related files:</p>
 <li>gene set preprocessing</li>
 <li>dataset merging</li>
 </ul>
-<p>Outputs → <code>data/</code></p>
+<p>Outputs of preprocessing go in <code>data/</code></p>
 <hr />
 </div>
 <div id="descriptive-analysis" class="section level3">
 <h3>Descriptive analysis</h3>
+<p>Runs descriptive analyses of the data and produces two supplementary
+figures.</p>
 <pre class="r"><code>source(&quot;analysis/descriptive/descriptive_master.R&quot;)</code></pre>
 <p>Outputs:</p>
 <ul>
-<li>study descriptions</li>
-<li>sample flow summaries</li>
+<li>visual description of dataset (Web Figure 1)</li>
+<li>data for flowchart of samples after each preprocessing step (Web
+Figure 2)</li>
 </ul>
 <p>Saved in:</p>
 <ul>
@@ -559,7 +532,14 @@ Manuscript-related files:</p>
 </div>
 <div id="application" class="section level3">
 <h3>Application</h3>
+<p>Runs main and supplementary analyses on real data.</p>
 <pre class="r"><code>source(&quot;analysis/application/application_master.R&quot;)</code></pre>
+<p>Outputs:</p>
+<ul>
+<li>Low-dimensional data application (Figure 3)</li>
+<li>High-dimensional data application (Figures 3, 4)</li>
+<li>Supplementary analyses (Supplementary Web Figures 9-13)</li>
+</ul>
 <p>Saved in:</p>
 <ul>
 <li><code>output/figures/application/</code></li>
@@ -568,12 +548,105 @@ Manuscript-related files:</p>
 </div>
 <div id="simulation" class="section level3">
 <h3>Simulation</h3>
+<p>Runs scripts to produce simulation results.</p>
 <pre class="r"><code>source(&quot;analysis/simulation/simulation_master.R&quot;)</code></pre>
+<p>Outputs:</p>
+<ul>
+<li>Main simulation results (Figures 1, 2)</li>
+<li>Supplementary simulation results (Web Figures 4-8)</li>
+</ul>
 <p>Saved in:</p>
 <ul>
-<li><code>output/results/simulation/</code></li>
-<li><code>output/figures/simulation/</code></li>
+<li><code>output/results/simulation/</code> (raw results data)</li>
+<li><code>output/figures/simulation/</code> (figures)</li>
 </ul>
+<hr />
+</div>
+</div>
+<div id="runtime-information" class="section level2">
+<h2>Runtime information</h2>
+<p>The full analysis pipeline takes roughly 1 day on a standard laptop,
+e.g. one with specs similar to:</p>
+<ul>
+<li>Dell Inc. Precision 5470</li>
+<li>12th Gen Intel® Core™ i7-12700H processor × 20 cores</li>
+<li>16GB RAM</li>
+</ul>
+<p>However, the grand majority of this computational time is taken by
+the simulation study. When excluding the simulation study from the
+<code>analysis_master.R</code> script, the runtime reduces to around 5
+minutes.</p>
+<p>To reduce this computational time, one may reduce the number of
+repetitions in the simulation studies. In the simulation files, these
+are controlled by the variable <code>J</code>, which is set to 100,000.
+To reduce this, you may replace this with a smaller number. In RStudio,
+on default key bindings this can be achieved by</p>
+<ul>
+<li>pressing <code>Ctrl+Shift+F</code> (find in files)</li>
+<li>typing exactly <code>J = 100000</code> and clicking “find”</li>
+<li>clicking “Replace” in the “Find in Files” window</li>
+<li>typing e.g. <code>J = 10000</code> and clicking “Replace All”</li>
+<li>Running the master script</li>
+</ul>
+<hr />
+</div>
+<div id="parallelisation" class="section level2">
+<h2>Parallelisation</h2>
+<p>Parallel computing has been used to render some parts of the analysis
+quicker. By default, we detect the number of cores on the user’s
+hardware using <code>parallel::detectCores()</code> use half of the
+available cores. To increase or decrease this (e.g. if your RStudio
+crashes when trying to run the analysis), simply replace the line
+<code>n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2</code>
+with e.g. <code>n.cores = 1</code> using the Find in Files approach
+described above.</p>
+<hr />
+</div>
+<div id="software-and-version-information" class="section level2">
+<h2>Software and version information</h2>
+<p>Below is a summary of the output of</p>
+<p><code>{r} sessionInfo()</code></p>
+<p>after loading all the libraries necessary for this repository.</p>
+</div>
+<div id="software-and-version-information-1" class="section level2">
+<h2>Software and version information</h2>
+<ul>
+<li><strong>OS:</strong> Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu)</li>
+<li><strong>R version:</strong> 4.5.3 (2026-03-11)</li>
+<li><strong>BLAS/LAPACK:</strong> OpenBLAS (LAPACK version 3.12.0)</li>
+<li><strong>Time zone:</strong> Europe/Paris</li>
+</ul>
+<div id="attached-packages" class="section level3">
+<h3>Attached packages</h3>
+<pre><code>knitr_1.51          kableExtra_1.4.0    digest_0.6.39       viridis_0.6.5
+viridisLite_0.4.3   scales_1.4.0        janitor_2.2.1       Biobase_2.70.0
+BiocGenerics_0.56.0 generics_0.1.4      readxl_1.4.5        GSA_1.03.3
+renv_1.2.2          Surrogate_3.4.1     patchwork_1.3.2     boot_1.3-32
+lubridate_1.9.5     forcats_1.0.1       stringr_1.6.0       purrr_1.2.2
+readr_2.2.0         tidyr_1.3.2         tibble_3.3.1        ggplot2_4.0.3
+tidyverse_2.0.0     SurrogateRank_3.0   dplyr_1.2.1         fs_2.1.0</code></pre>
+</div>
+<div id="packages-loaded-via-namespace" class="section level3">
+<h3>Packages loaded via namespace</h3>
+<pre><code>gtable_0.3.6        xfun_0.57           lattice_0.22-9      tzdb_0.5.0
+vctrs_0.7.3         tools_4.5.3         Rdpack_2.6.6        parallel_4.5.3
+sandwich_3.1-1      pbmcapply_1.5.1     pkgconfig_2.0.3     Matrix_1.7-5
+RColorBrewer_1.1-3  S7_0.2.2            lifecycle_1.0.5     compiler_4.5.3
+farver_2.1.2        textshaping_1.0.5   maxLik_1.5-2.2      snakecase_0.11.1
+htmltools_0.5.9     pillar_1.11.1       nloptr_2.2.1        MASS_7.3-65
+reformulas_0.4.4    nlme_3.1-169        tidyselect_1.2.1    stringi_1.8.7
+splines_4.5.3       miscTools_0.6-30    fastmap_1.2.0       grid_4.5.3
+cli_3.6.6           magrittr_2.0.5      survival_3.8-6      withr_3.0.2
+timechange_0.4.0    rmarkdown_2.31      lme4_2.0-1          gridExtra_2.3
+cellranger_1.1.0    zoo_1.8-15          hms_1.1.4           evaluate_1.0.5
+rbibutils_2.4.1     rlang_1.2.0         Rcpp_1.1.1          glue_1.8.1
+xml2_1.5.2          BiocManager_1.30.27 svglite_2.2.2       rstudioapi_0.18.0
+minqa_1.2.8         R6_2.6.1            systemfonts_1.3.2</code></pre>
+<blockquote>
+<p>Full version details are recorded in <code>renv.lock</code>. Run
+<code>renv::restore()</code> to reproduce the exact package
+environment.</p>
+</blockquote>
 <hr />
 </div>
 </div>
@@ -581,6 +654,7 @@ Manuscript-related files:</p>
 <h2>Citation</h2>
 <p>The methodology is described in:</p>
 <p><em>Meta-Analysis of High-Dimensional Surrogate Markers</em></p>
+<p>and implemented in the R package SurrogateRank.</p>
 <p>(arXiv preprint coming soon)</p>
 </div>
 </div>

@@ -6,6 +6,7 @@ library(tidyverse)
 library(SurrogateRank)
 library(knitr)
 library(kableExtra)
+library(parallel)
 
 # Set a global seed
 set.seed(08012025)
@@ -88,8 +89,8 @@ n_studies_max <- length(unique(df$study_accession))
 n_studies_grid <- c(2:n_studies_max)
 n_studies_labels <- ifelse(is.na(n_studies_grid), "All", as.character(n_studies_grid))
 
-B = 100000
-perm_seeds <- sample.int(n = .Machine$integer.max, size = B)
+J = 100000
+perm_seeds <- sample.int(n = .Machine$integer.max, size = J)
 p_save <- fs::path(results_folder, "simulation_nonparametric_nstudies.rds")
 checkpoint_every <- 100
 checkpoint_path <- fs::path(results_folder,
@@ -110,7 +111,7 @@ if (file.exists(p_save)) {
     n_cells <- nrow(sim_grid)
     
     sim_params <- list(
-      B = B,
+      J = J,
       alpha = alpha,
       epsilon_meta = 0.2,
       epsilon_study = 0.2,
@@ -145,7 +146,7 @@ if (file.exists(p_save)) {
                 start_row,
                 n_cells,
                 start_b,
-                B
+                J
               )
             )
           }
@@ -184,13 +185,13 @@ if (file.exists(p_save)) {
         )
         
         if (row == start_row &&
-            !is.null(current_fpr_vec) && length(current_fpr_vec) == B) {
+            !is.null(current_fpr_vec) && length(current_fpr_vec) == J) {
           {
             fpr_vec <- current_fpr_vec
           }
         } else {
           {
-            fpr_vec <- rep(NA_real_, B)
+            fpr_vec <- rep(NA_real_, J)
           }
         }
         
@@ -200,7 +201,7 @@ if (file.exists(p_save)) {
           1L
         }
         
-        for (b in seq(from = b_begin, to = B)) {
+        for (b in seq(from = b_begin, to = J)) {
           {
             fpr_vec[b] <- tryCatch({
               df_perm_list <- generate_permuted_dataset(
@@ -235,7 +236,7 @@ if (file.exists(p_save)) {
                 p.correction = "none",
                 show.pooled.effect = TRUE,
                 return.study.similarity.plot = FALSE,
-                n.cores = 10,
+                n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2,
                 return.fit.plot = FALSE,
                 return.forest.plot = FALSE,
                 normalise.weights = FALSE,
@@ -247,7 +248,7 @@ if (file.exists(p_save)) {
               p_vals <- rise_result[["screening.metrics.meta"]]$p.unadjusted
               fpr_b <- mean(p_vals < alpha)
               
-              rm(df_perm_list, rise_result, p_vals)
+              #rm(df_perm_list, rise_result, p_vals)
               gc()
               fpr_b
               
@@ -262,9 +263,9 @@ if (file.exists(p_save)) {
               }
             })
             
-            cat(sprintf("  Permutation %d / %d  |  FPR = %.4f\n", b, B, fpr_vec[b]))
+            cat(sprintf("  Permutation %d / %d  |  FPR = %.4f\n", b, J, fpr_vec[b]))
             
-            if (b %% checkpoint_every == 0L || b == B) {
+            if (b %% checkpoint_every == 0L || b == J) {
               {
                 saveRDS(
                   list(
@@ -335,7 +336,7 @@ p1 <- ggplot(fpr_df, aes(x = n_studies, y = fpr)) +
   labs(
     x = "Number of studies",
     y = "False positive rate",
-    title = sprintf("FPR distribution per number of studies over %d permutations", B)
+    title = sprintf("FPR distribution per number of studies over %d permutations", J)
   ) +
   theme_minimal(base_size = 20) +
   theme(plot.title = element_text(hjust = 0.5, size = 25),

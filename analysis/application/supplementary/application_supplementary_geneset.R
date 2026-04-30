@@ -1,5 +1,10 @@
 # Script to run the supplementary analysis evaluating the impact of the geneset definition
 
+# Libraries
+library(tidyverse)
+library(SurrogateRank)
+library(parallel)
+
 grid = c("BG3M", "none")
 
 for(val in grid){
@@ -74,7 +79,7 @@ hyperparameter_list = list(
   
   
   # Other hyperparameters
-  n.cores = 5,
+  n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2,
   # number of cores for parallel computing
   screen.plot.topN = 20, # how many predictors to plot
   screen.plot.point.estimate = F,
@@ -101,11 +106,6 @@ file_name_tag = paste0("_timepoint",
                               paste0("_power", hyperparameter_list$power.want.s.study)),
                        "_geneset",
                        hyperparameter_list$geneset_definition)
-
-
-# Libraries
-library(tidyverse)
-library(SurrogateRank)
 
 # Load internal functions
 sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)

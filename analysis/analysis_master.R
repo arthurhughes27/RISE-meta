@@ -1,10 +1,10 @@
 # Master script to run all preprocessing, descriptive, data analysis and simulation scripts
 
-# Script to install any missing dependencies
-source(fs::path("analysis", "install_dependencies.R"))
-
 # Script to ensure project structure is in place
 source(fs::path("analysis", "create_project_structure.R"))
+
+# Restore software and package environment
+renv::restore()
 
 # Master script for preprocessing files
 source(fs::path("analysis", "preprocessing", "preprocessing_master.R"))

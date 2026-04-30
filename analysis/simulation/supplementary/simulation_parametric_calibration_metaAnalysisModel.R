@@ -19,7 +19,7 @@ simulation_figures_folder = fs::path("output", "figures", "simulation", "supplem
 simulation_results_folder = fs::path("output", "results", "simulation", "supplementary")
 
 # Number of independent markers to generate trial-level effects for
-J = 1000000
+J = 100000
 
 # Value of epsilon defining the validity region
 epsilon <- 0.1
