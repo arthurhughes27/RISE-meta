@@ -26,7 +26,7 @@ renv::restore()
 ```r
 source("analysis/analysis_master.R")
 ```
-Note that due to extensive simulations, this may take a long time (see Runtime information section below). 
+Note that due to extensive simulations, this may take a long time (see [Runtime information](#runtime-information)). 
 
 ---
 
@@ -160,7 +160,7 @@ Runs:
 - simulation study 
 
 **NOTE:** due to the extensive number of simulations performed, running the simulation files may take a long time.
-See the *Runtime information* section below for details and suggestions. 
+See [Runtime information](#runtime-information) for details and suggestions. 
 
 ---
 
@@ -263,7 +263,7 @@ In RStudio, on default key bindings this can be achieved by
 - typing e.g. `J = 10000` and clicking "Replace All"
 - Running the master script
 
-Note that computational time may be significantly longer for Windows users due to incompatibility of this OS with our parallel computing setup (see below).
+Note that computational time may be significantly longer for Windows users due to incompatibility of this OS with our parallel computing setup (see [Parallelisation](#parallelisation)).
 
 ---
 
@@ -347,10 +347,4 @@ Full version details are recorded in `renv.lock`. Run `renv::restore()` to repro
 
 ## Citation
 
-The methodology is described in:
-
-*Meta-Analysis of High-Dimensional Surrogate Markers*
-
-and implemented in the R package SurrogateRank.
-
-(arXiv preprint coming soon)
+The methodology is described in: *Meta-Analysis of High-Dimensional Surrogate Markers* and implemented in the R package `SurrogateRank`, available on the CRAN.

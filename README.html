@@ -372,24 +372,33 @@ Markers</em>, available soon on arXiv.</p>
 <code>data-raw/</code>.</li>
 <li>Install dependencies and recreate software environment</li>
 </ol>
-<pre class="r"><code>if (!requireNamespace(renv, quietly = TRUE)) {
-    install.packages(renv)
-  }
+<pre class="r"><code>if (!requireNamespace(&quot;renv&quot;, quietly = TRUE)){
+  install.packages(&quot;renv&quot;)
+}
+if (!requireNamespace(&quot;BiocManager&quot;, quietly = TRUE)){  
+  install.packages(&quot;BiocManager&quot;) # Required to restore bioconductor packages
+}
 renv::restore()</code></pre>
 <ol start="5" style="list-style-type: decimal">
 <li>Run the full analysis pipeline:</li>
 </ol>
 <pre class="r"><code>source(&quot;analysis/analysis_master.R&quot;)</code></pre>
 <p>Note that due to extensive simulations, this may take a long time
-(see Runtime information section below).</p>
+(see <a href="#runtime-information">Runtime information</a>).</p>
 <hr />
 </div>
 <div id="reproducing-the-software-environment" class="section level2">
 <h2>Reproducing the software environment</h2>
 <p>This repository uses <a href="https://rstudio.github.io/renv/"><code>renv</code></a> for package
-management. To restore the exact package versions used in this
-analysis:</p>
-<pre class="r"><code>renv::restore()</code></pre>
+management. To install this package andrestore the exact package
+versions used in this analysis:</p>
+<pre class="r"><code>if (!requireNamespace(&quot;renv&quot;, quietly = TRUE)){
+  install.packages(&quot;renv&quot;)
+}
+if (!requireNamespace(&quot;BiocManager&quot;, quietly = TRUE)){  
+  install.packages(&quot;BiocManager&quot;) # Required to restore bioconductor packages
+}
+renv::restore()</code></pre>
 <p>The complete package environment is recorded in
 <code>renv.lock</code>.</p>
 <hr />
@@ -504,8 +513,7 @@ repository)</p></li>
 <li>simulation study</li>
 </ul>
 <p><strong>NOTE:</strong> due to the extensive number of simulations
-performed, running the simulation files may take a long time. See the
-<em>Runtime information</em> section below for details and
+performed, running the simulation files may take a long time. See <a href="#runtime-information">Runtime information</a> for details and
 suggestions.</p>
 <hr />
 </div>
@@ -601,7 +609,7 @@ on default key bindings this can be achieved by</p>
 </ul>
 <p>Note that computational time may be significantly longer for Windows
 users due to incompatibility of this OS with our parallel computing
-setup (see below).</p>
+setup (see <a href="#parallelisation">Parallelisation</a>).</p>
 <hr />
 </div>
 <div id="parallelisation" class="section level2">
@@ -634,7 +642,7 @@ runtime may be significantly slower for windows users.</p>
 <div id="software-and-version-information" class="section level2">
 <h2>Software and version information</h2>
 <p>Below is a summary of the output of</p>
-<p><code>{r} sessionInfo()</code></p>
+<pre class="r"><code>sessionInfo()</code></pre>
 <p>after loading all the libraries necessary for this repository.</p>
 <ul>
 <li><strong>OS:</strong> Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu)</li>
