@@ -14,9 +14,12 @@ source("analysis/create_project_structure.R")
 3. Download the raw data (described below) and place it in `data-raw/`.
 4. Install dependencies and recreate software environment
 ```r
-if (!requireNamespace(renv, quietly = TRUE)) {
-    install.packages(renv)
-  }
+if (!requireNamespace("renv", quietly = TRUE)){
+  install.packages("renv")
+}
+if (!requireNamespace("BiocManager", quietly = TRUE)){  
+  install.packages("BiocManager") # Required to restore bioconductor packages
+}
 renv::restore()
 ```
 5. Run the full analysis pipeline:
@@ -29,12 +32,15 @@ Note that due to extensive simulations, this may take a long time (see Runtime i
 
 ## Reproducing the software environment
 
-This repository uses [`renv`](https://rstudio.github.io/renv/) for package management. To install this package and restore the exact package versions used in this analysis:
+This repository uses [`renv`](https://rstudio.github.io/renv/) for package management. To install this package andrestore the exact package versions used in this analysis:
 
 ```r
-if (!requireNamespace(renv, quietly = TRUE)) {
-    install.packages(renv)
-  }
+if (!requireNamespace("renv", quietly = TRUE)){
+  install.packages("renv")
+}
+if (!requireNamespace("BiocManager", quietly = TRUE)){  
+  install.packages("BiocManager") # Required to restore bioconductor packages
+}
 renv::restore()
 ```
 
@@ -297,7 +303,7 @@ so the runtime may be significantly slower for windows users.
 
 Below is a summary of the output of 
 
-```{r}
+```r
 sessionInfo()
 ```
 
