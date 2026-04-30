@@ -18,13 +18,13 @@ p_load_all_noNorm <- fs::path(raw_data_folder, "all_noNorm_eset.rds")
 all_noNorm_eset <- readRDS(p_load_all_noNorm)
 
 # Load the expression data
-all_noNorm_expr = all_noNorm_eset@assayData[["exprs"]] %>% 
-  t() %>% 
+all_noNorm_expr = all_noNorm_eset@assayData[["exprs"]] %>%
+  t() %>%
   as.data.frame()
 
 # Make the column names lowercase
-colnames(all_noNorm_expr) = all_noNorm_expr %>% 
-  colnames() %>% 
+colnames(all_noNorm_expr) = all_noNorm_expr %>%
+  colnames() %>%
   tolower()
 
 # Now extract information for the first two columns (participant_id and study_time_collected)
@@ -37,11 +37,11 @@ matches_all_noNorm <- str_match(sample_info_all_noNorm , "^(SUB[0-9.]+)_(-?[0-9.
 participant_id_all_noNorm <- matches_all_noNorm[, 2]
 
 # Study times (numeric, rounded)
-study_time_collected_all_noNorm <- matches_all_noNorm[, 3] %>% 
-  as.numeric() %>% 
+study_time_collected_all_noNorm <- matches_all_noNorm[, 3] %>%
+  as.numeric() %>%
   round(2)
 
-# Insert the identifying information as the first two columns 
+# Insert the identifying information as the first two columns
 all_noNorm_expr <- all_noNorm_expr %>%
   mutate(participant_id = participant_id_all_noNorm, study_time_collected = study_time_collected_all_noNorm) %>%
   select(participant_id, study_time_collected, everything())

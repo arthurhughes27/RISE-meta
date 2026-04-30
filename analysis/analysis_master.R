@@ -4,8 +4,11 @@
 source(fs::path("analysis", "create_project_structure.R"))
 
 # Install and use `renv` package to restore software environment
-if (!requireNamespace(renv, quietly = TRUE)) {
-  install.packages(renv)
+if (!requireNamespace("renv", quietly = TRUE)) {
+  install.packages("renv")
+}
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+  install.packages("BiocManager") # Required to restore bioconductor packages
 }
 renv::restore()
 

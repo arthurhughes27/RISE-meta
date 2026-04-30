@@ -15,7 +15,7 @@ p_load_immResp <- fs::path(processed_data_folder, "hipc_immResp.rds")
 # Read in the files
 expr_all_noNorm <- readRDS(p_load_expr_all_noNorm)
 hipc_clinical <- readRDS(p_load_clinical)
-hipc_immResp <- readRDS(p_load_immResp) %>% 
+hipc_immResp <- readRDS(p_load_immResp) %>%
   dplyr::select(-study_accession)
 
 # Merge together the clinical and immune response dataframes
@@ -66,7 +66,7 @@ hipc_merged_all_noNorm = full_join(
   by = c("participant_id", "study_time_collected")
 )
 
-# For participants with multiple baseline measurements, take only the most recent. 
+# For participants with multiple baseline measurements, take only the most recent.
 # Rename all baseline sample timepoints to time = 0
 # Work on a copy
 hipc_merged_all_noNorm <- hipc_merged_all_noNorm %>%

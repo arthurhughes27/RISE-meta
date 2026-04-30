@@ -9,8 +9,11 @@ library(boot)
 application_figures_folder <- fs::path("output", "figures", "application", "main")
 
 ccc_fun <- function(x, y) {
-  if (length(x) < 2 || length(y) < 2) return(NA_real_)
-  if (var(x, na.rm = TRUE) == 0 || var(y, na.rm = TRUE) == 0) return(NA_real_)
+  if (length(x) < 2 || length(y) < 2)
+    return(NA_real_)
+  if (var(x, na.rm = TRUE) == 0 ||
+      var(y, na.rm = TRUE) == 0)
+    return(NA_real_)
   2 * cov(x, y, use = "complete.obs") /
     (var(x, na.rm = TRUE) +
        var(y, na.rm = TRUE) +
@@ -33,8 +36,10 @@ make_legend_breaks <- function(n_vals) {
     median_val <- median(n_vals)
     mid_val <- round(median_val)
     
-    if (mid_val <= min_val) mid_val <- min_val + 1
-    if (mid_val >= max_val) mid_val <- max_val - 1
+    if (mid_val <= min_val)
+      mid_val <- min_val + 1
+    if (mid_val >= max_val)
+      mid_val <- max_val - 1
     
     legend_breaks <- c(min_val, mid_val, max_val)
     legend_labels <- as.character(legend_breaks)
@@ -62,10 +67,7 @@ ok_centers_ARMD <- ARMD %>%
   group_by(Center, Treat) %>%
   summarise(n_patients = n(), .groups = "drop") %>%
   group_by(Center) %>%
-  filter(
-    all(n_patients >= 2),
-    sum(n_patients) >= 5
-  ) %>%
+  filter(all(n_patients >= 2), sum(n_patients) >= 5) %>%
   pull(Center)
 
 dat_ARMD <- ARMD %>%
@@ -106,18 +108,13 @@ ccc_stat_ARMD <- function(data, indices) {
 }
 
 set.seed(123)
-trial_ccc_ARMD_boot <- boot(
-  data = trial_effects_ARMD,
-  statistic = ccc_stat_ARMD,
-  R = 2000
-)
+trial_ccc_ARMD_boot <- boot(data = trial_effects_ARMD,
+                            statistic = ccc_stat_ARMD,
+                            R = 2000)
 
 trial_ccc_ARMD_CI <- boot.ci(trial_ccc_ARMD_boot, type = c("bca"))
 
-trial_ccc_ARMD_CI_bca <- c(
-  lower = trial_ccc_ARMD_CI$bca[1, 4],
-  upper = trial_ccc_ARMD_CI$bca[1, 5]
-)
+trial_ccc_ARMD_CI_bca <- c(lower = trial_ccc_ARMD_CI$bca[1, 4], upper = trial_ccc_ARMD_CI$bca[1, 5])
 
 
 plot.min.global_ARMD <- min(trial_effects_ARMD$u.s, trial_effects_ARMD$u.y) - 2
@@ -144,10 +141,20 @@ jointModel_plot_ARMD <- trial_effects_ARMD %>%
     x = plot.min.global_ARMD,
     y = max(trial_effects_ARMD$u.y, na.rm = TRUE),
     label = paste0(
-      "Trial R2 = ", round(trial_R2_ARMD, 2),
-      " [", round(fit_full_ARMD$Trial.R2$`CI lower limit`, 2), ", ", round(fit_full_ARMD$Trial.R2$`CI upper limit`, 2), "]",
-      "\nCCC = ", round(trial_ccc_ARMD, 2),
-      " [", round(trial_ccc_ARMD_CI_bca[1], 2), ", ", round(trial_ccc_ARMD_CI_bca[2], 2), "]"
+      "Trial R2 = ",
+      round(trial_R2_ARMD, 2),
+      " [",
+      round(fit_full_ARMD$Trial.R2$`CI lower limit`, 2),
+      ", ",
+      round(fit_full_ARMD$Trial.R2$`CI upper limit`, 2),
+      "]",
+      "\nCCC = ",
+      round(trial_ccc_ARMD, 2),
+      " [",
+      round(trial_ccc_ARMD_CI_bca[1], 2),
+      ", ",
+      round(trial_ccc_ARMD_CI_bca[2], 2),
+      "]"
     ),
     hjust = 0,
     vjust = 1,
@@ -155,20 +162,18 @@ jointModel_plot_ARMD <- trial_effects_ARMD %>%
     size = 8
   ) +
   make_size_scale(c(trial_effects_ARMD$n, NA)) +
-  scale_x_continuous(
-    limits = c(plot.min.global_ARMD, max(trial_effects_ARMD$u.s, na.rm = TRUE) + 2),
-    expand = c(0, 0)
-  ) +
-  scale_y_continuous(
-    limits = c(plot.min.global_ARMD, max(trial_effects_ARMD$u.y, na.rm = TRUE) + 2),
-    expand = c(0, 0)
-  ) +
+  scale_x_continuous(limits = c(
+    plot.min.global_ARMD,
+    max(trial_effects_ARMD$u.s, na.rm = TRUE) + 2
+  ),
+  expand = c(0, 0)) +
+  scale_y_continuous(limits = c(
+    plot.min.global_ARMD,
+    max(trial_effects_ARMD$u.y, na.rm = TRUE) + 2
+  ),
+  expand = c(0, 0)) +
   coord_fixed(ratio = 1) +
-  labs(
-    x = "Treatment effect on CVA at 6 months",
-    y = "Treatment effect on CVA at 12 months",
-    size = "Center N"
-  ) +
+  labs(x = "Treatment effect on CVA at 6 months", y = "Treatment effect on CVA at 12 months", size = "Center N") +
   theme_minimal(base_size = 18) +
   theme(
     plot.title = element_text(size = 25, hjust = 0.5, face = "bold"),
@@ -212,18 +217,13 @@ r2_rise_w_stat_ARMD <- function(data, indices) {
 }
 
 set.seed(123)
-R2_rise_w_ARMD_boot <- boot(
-  data = gamma_df_ARMD,
-  statistic = r2_rise_w_stat_ARMD,
-  R = 2000
-)
+R2_rise_w_ARMD_boot <- boot(data = gamma_df_ARMD,
+                            statistic = r2_rise_w_stat_ARMD,
+                            R = 2000)
 
 R2_rise_w_ARMD_CI <- boot.ci(R2_rise_w_ARMD_boot, type = c("bca"))
 
-R2_rise_w_ARMD_CI_bca <- c(
-  lower = R2_rise_w_ARMD_CI$bca[1, 4],
-  upper = R2_rise_w_ARMD_CI$bca[1, 5]
-)
+R2_rise_w_ARMD_CI_bca <- c(lower = R2_rise_w_ARMD_CI$bca[1, 4], upper = R2_rise_w_ARMD_CI$bca[1, 5])
 
 # Bootstrap CI for CCC from RISE-Meta trial-level effects
 rise_ccc_stat_ARMD <- function(data, indices) {
@@ -232,18 +232,13 @@ rise_ccc_stat_ARMD <- function(data, indices) {
 }
 
 set.seed(123)
-rise_ccc_ARMD_boot <- boot(
-  data = gamma_df_ARMD,
-  statistic = rise_ccc_stat_ARMD,
-  R = 2000
-)
+rise_ccc_ARMD_boot <- boot(data = gamma_df_ARMD,
+                           statistic = rise_ccc_stat_ARMD,
+                           R = 2000)
 
 rise_ccc_ARMD_CI <- boot.ci(rise_ccc_ARMD_boot, type = c("bca"))
 
-rise_ccc_ARMD_CI_bca <- c(
-  lower = rise_ccc_ARMD_CI$bca[1, 4],
-  upper = rise_ccc_ARMD_CI$bca[1, 5]
-)
+rise_ccc_ARMD_CI_bca <- c(lower = rise_ccc_ARMD_CI$bca[1, 4], upper = rise_ccc_ARMD_CI$bca[1, 5])
 
 riseMeta_plot_ARMD <- gamma_df_ARMD %>%
   ggplot(aes(x = u.s, y = u.y)) +
@@ -267,10 +262,20 @@ riseMeta_plot_ARMD <- gamma_df_ARMD %>%
     x = -0.1,
     y = 1.05,
     label = paste0(
-      "Trial R2 = ", round(R2_rise_w_ARMD, 2),
-      " [", round(R2_rise_w_ARMD_CI_bca["lower"], 2), ", ", round(R2_rise_w_ARMD_CI_bca["upper"], 2), "]",
-      "\nCCC = ", round(rise_ccc_ARMD, 2),
-      " [", round(rise_ccc_ARMD_CI_bca["lower"], 2), ", ", round(rise_ccc_ARMD_CI_bca["upper"], 2), "]"
+      "Trial R2 = ",
+      round(R2_rise_w_ARMD, 2),
+      " [",
+      round(R2_rise_w_ARMD_CI_bca["lower"], 2),
+      ", ",
+      round(R2_rise_w_ARMD_CI_bca["upper"], 2),
+      "]",
+      "\nCCC = ",
+      round(rise_ccc_ARMD, 2),
+      " [",
+      round(rise_ccc_ARMD_CI_bca["lower"], 2),
+      ", ",
+      round(rise_ccc_ARMD_CI_bca["upper"], 2),
+      "]"
     ),
     hjust = 0,
     vjust = 1,
@@ -281,11 +286,7 @@ riseMeta_plot_ARMD <- gamma_df_ARMD %>%
   scale_x_continuous(limits = c(-0.1, 1.1), expand = c(0, 0)) +
   scale_y_continuous(limits = c(-0.1, 1.1), expand = c(0, 0)) +
   coord_fixed(ratio = 1) +
-  labs(
-    x = "Treatment effect on CVA at 6 months",
-    y = "Treatment effect on CVA at 12 months",
-    size = "Center N"
-  ) +
+  labs(x = "Treatment effect on CVA at 6 months", y = "Treatment effect on CVA at 12 months", size = "Center N") +
   theme_minimal(base_size = 18) +
   theme(
     plot.title = element_text(size = 25, hjust = 0.5, face = "bold"),
@@ -315,12 +316,14 @@ riseMeta_plot_mod_ARMD <- riseMeta_plot_ARMD +
   theme(axis.title.y = element_blank())
 
 combined_plot_ARMD <-
-  (jointModel_plot_mod_ARMD + plot_spacer() + riseMeta_plot_mod_ARMD +
-     plot_layout(guides = "collect", widths = c(4, 0.5, 4))) +
-  plot_annotation(
-    title = "A) Age-related macular degeneration dataset",
-    theme = theme(plot.title = element_text(size = 40, face = "bold", hjust = 0.5))
-  )
+  (
+    jointModel_plot_mod_ARMD + plot_spacer() + riseMeta_plot_mod_ARMD +
+      plot_layout(guides = "collect", widths = c(4, 0.5, 4))
+  ) +
+  plot_annotation(title = "A) Age-related macular degeneration dataset",
+                  theme = theme(plot.title = element_text(
+                    size = 40, face = "bold", hjust = 0.5
+                  )))
 
 # ============================================================
 # Ovarian cancer
@@ -332,16 +335,12 @@ ok_centers_Ovarian <- Ovarian %>%
   group_by(Center, Treat) %>%
   summarise(n_patients = n(), .groups = "drop") %>%
   group_by(Center) %>%
-  filter(
-    all(n_patients >= 2),
-    sum(n_patients) >= 5
-  ) %>%
+  filter(all(n_patients >= 2), sum(n_patients) >= 5) %>%
   pull(Center)
 
 dat_Ovarian <- Ovarian %>%
-  filter(Center %in% ok_centers_Ovarian) %>% 
-  mutate(Surv = log(Surv),
-         Pfs = log(Pfs))
+  filter(Center %in% ok_centers_Ovarian) %>%
+  mutate(Surv = log(Surv), Pfs = log(Pfs))
 
 dat_Ovarian$Patient %>% unique() %>% length()
 dat_Ovarian$Center %>% unique() %>% length()
@@ -378,18 +377,13 @@ ccc_stat_Ovarian <- function(data, indices) {
 }
 
 set.seed(123)
-trial_ccc_Ovarian_boot <- boot(
-  data = trial_effects_Ovarian,
-  statistic = ccc_stat_Ovarian,
-  R = 2000
-)
+trial_ccc_Ovarian_boot <- boot(data = trial_effects_Ovarian,
+                               statistic = ccc_stat_Ovarian,
+                               R = 2000)
 
 trial_ccc_Ovarian_CI <- boot.ci(trial_ccc_Ovarian_boot, type = c("bca"))
 
-trial_ccc_Ovarian_CI_bca <- c(
-  lower = trial_ccc_Ovarian_CI$bca[1, 4],
-  upper = trial_ccc_Ovarian_CI$bca[1, 5]
-)
+trial_ccc_Ovarian_CI_bca <- c(lower = trial_ccc_Ovarian_CI$bca[1, 4], upper = trial_ccc_Ovarian_CI$bca[1, 5])
 
 plot.min.global_Ovarian <- min(trial_effects_Ovarian$u.s, trial_effects_Ovarian$u.y) - 0.2
 
@@ -415,10 +409,20 @@ jointModel_plot_Ovarian <- trial_effects_Ovarian %>%
     x = plot.min.global_Ovarian,
     y = max(trial_effects_Ovarian$u.y, na.rm = TRUE),
     label = paste0(
-      "Trial R2 = ", round(trial_R2_Ovarian, 2),
-      " [", round(fit_full_Ovarian$Trial.R2$`CI lower limit`, 2), ", ", round(fit_full_Ovarian$Trial.R2$`CI upper limit`, 2), "]",
-      "\nCCC = ", round(trial_ccc_Ovarian, 2),
-      " [", round(trial_ccc_Ovarian_CI_bca["lower"], 2), ", ", round(trial_ccc_Ovarian_CI_bca["upper"], 2), "]"
+      "Trial R2 = ",
+      round(trial_R2_Ovarian, 2),
+      " [",
+      round(fit_full_Ovarian$Trial.R2$`CI lower limit`, 2),
+      ", ",
+      round(fit_full_Ovarian$Trial.R2$`CI upper limit`, 2),
+      "]",
+      "\nCCC = ",
+      round(trial_ccc_Ovarian, 2),
+      " [",
+      round(trial_ccc_Ovarian_CI_bca["lower"], 2),
+      ", ",
+      round(trial_ccc_Ovarian_CI_bca["upper"], 2),
+      "]"
     ),
     hjust = 0,
     vjust = 1,
@@ -426,20 +430,18 @@ jointModel_plot_Ovarian <- trial_effects_Ovarian %>%
     size = 8
   ) +
   make_size_scale(c(trial_effects_Ovarian$n, NA)) +
-  scale_x_continuous(
-    limits = c(plot.min.global_Ovarian, max(trial_effects_Ovarian$u.s, na.rm = TRUE) + 0.2),
-    expand = c(0, 0)
-  ) +
-  scale_y_continuous(
-    limits = c(plot.min.global_Ovarian, max(trial_effects_Ovarian$u.y, na.rm = TRUE) + 0.2),
-    expand = c(0, 0)
-  ) +
+  scale_x_continuous(limits = c(
+    plot.min.global_Ovarian,
+    max(trial_effects_Ovarian$u.s, na.rm = TRUE) + 0.2
+  ),
+  expand = c(0, 0)) +
+  scale_y_continuous(limits = c(
+    plot.min.global_Ovarian,
+    max(trial_effects_Ovarian$u.y, na.rm = TRUE) + 0.2
+  ),
+  expand = c(0, 0)) +
   coord_fixed(ratio = 1) +
-  labs(
-    x = "Treatment effect on log(progression-free survival)",
-    y = "Treatment effect on log(overall survival)",
-    size = "Center N"
-  ) +
+  labs(x = "Treatment effect on log(progression-free survival)", y = "Treatment effect on log(overall survival)", size = "Center N") +
   theme_minimal(base_size = 18) +
   theme(
     plot.title = element_text(size = 25, hjust = 0.5, face = "bold"),
@@ -483,18 +485,13 @@ r2_rise_w_stat_Ovarian <- function(data, indices) {
 }
 
 set.seed(123)
-R2_rise_w_Ovarian_boot <- boot(
-  data = gamma_df_Ovarian,
-  statistic = r2_rise_w_stat_Ovarian,
-  R = 2000
-)
+R2_rise_w_Ovarian_boot <- boot(data = gamma_df_Ovarian,
+                               statistic = r2_rise_w_stat_Ovarian,
+                               R = 2000)
 
 R2_rise_w_Ovarian_CI <- boot.ci(R2_rise_w_Ovarian_boot, type = c("bca"))
 
-R2_rise_w_Ovarian_CI_bca <- c(
-  lower = R2_rise_w_Ovarian_CI$bca[1, 4],
-  upper = R2_rise_w_Ovarian_CI$bca[1, 5]
-)
+R2_rise_w_Ovarian_CI_bca <- c(lower = R2_rise_w_Ovarian_CI$bca[1, 4], upper = R2_rise_w_Ovarian_CI$bca[1, 5])
 
 # Bootstrap CI for CCC from RISE-Meta trial-level effects
 rise_ccc_stat_Ovarian <- function(data, indices) {
@@ -503,18 +500,13 @@ rise_ccc_stat_Ovarian <- function(data, indices) {
 }
 
 set.seed(123)
-rise_ccc_Ovarian_boot <- boot(
-  data = gamma_df_Ovarian,
-  statistic = rise_ccc_stat_Ovarian,
-  R = 2000
-)
+rise_ccc_Ovarian_boot <- boot(data = gamma_df_Ovarian,
+                              statistic = rise_ccc_stat_Ovarian,
+                              R = 2000)
 
 rise_ccc_Ovarian_CI <- boot.ci(rise_ccc_Ovarian_boot, type = c("bca"))
 
-rise_ccc_Ovarian_CI_bca <- c(
-  lower = rise_ccc_Ovarian_CI$bca[1, 4],
-  upper = rise_ccc_Ovarian_CI$bca[1, 5]
-)
+rise_ccc_Ovarian_CI_bca <- c(lower = rise_ccc_Ovarian_CI$bca[1, 4], upper = rise_ccc_Ovarian_CI$bca[1, 5])
 
 riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
   ggplot(aes(x = u.s, y = u.y)) +
@@ -538,10 +530,20 @@ riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
     x = -0.1,
     y = 1.05,
     label = paste0(
-      "Trial R2 = ", round(R2_rise_w_Ovarian, 2),
-      " [", round(R2_rise_w_Ovarian_CI_bca["lower"], 2), ", ", round(R2_rise_w_Ovarian_CI_bca["upper"], 2), "]",
-      "\nCCC = ", round(rise_ccc_Ovarian, 2),
-      " [", round(rise_ccc_Ovarian_CI_bca["lower"], 2), ", ", round(rise_ccc_Ovarian_CI_bca["upper"], 2), "]"
+      "Trial R2 = ",
+      round(R2_rise_w_Ovarian, 2),
+      " [",
+      round(R2_rise_w_Ovarian_CI_bca["lower"], 2),
+      ", ",
+      round(R2_rise_w_Ovarian_CI_bca["upper"], 2),
+      "]",
+      "\nCCC = ",
+      round(rise_ccc_Ovarian, 2),
+      " [",
+      round(rise_ccc_Ovarian_CI_bca["lower"], 2),
+      ", ",
+      round(rise_ccc_Ovarian_CI_bca["upper"], 2),
+      "]"
     ),
     hjust = 0,
     vjust = 1,
@@ -552,11 +554,7 @@ riseMeta_plot_Ovarian <- gamma_df_Ovarian %>%
   scale_x_continuous(limits = c(-0.1, 1.1), expand = c(0, 0)) +
   scale_y_continuous(limits = c(-0.1, 1.1), expand = c(0, 0)) +
   coord_fixed(ratio = 1) +
-  labs(
-    x = "Treatment effect on log(progression-free survival)",
-    y = "Treatment effect on log(overall survival)",
-    size = "Center N"
-  ) +
+  labs(x = "Treatment effect on log(progression-free survival)", y = "Treatment effect on log(overall survival)", size = "Center N") +
   theme_minimal(base_size = 18) +
   theme(
     plot.title = element_text(size = 25, hjust = 0.5, face = "bold"),
@@ -586,12 +584,14 @@ riseMeta_plot_mod_Ovarian <- riseMeta_plot_Ovarian +
   theme(axis.title.y = element_blank())
 
 combined_plot_Ovarian <-
-  (jointModel_plot_mod_Ovarian + plot_spacer() + riseMeta_plot_mod_Ovarian +
-     plot_layout(guides = "collect", widths = c(4, 0.5, 4))) +
-  plot_annotation(
-    title = "B) Ovarian cancer dataset",
-    theme = theme(plot.title = element_text(size = 40, face = "bold", hjust = 0.5))
-  )
+  (
+    jointModel_plot_mod_Ovarian + plot_spacer() + riseMeta_plot_mod_Ovarian +
+      plot_layout(guides = "collect", widths = c(4, 0.5, 4))
+  ) +
+  plot_annotation(title = "B) Ovarian cancer dataset",
+                  theme = theme(plot.title = element_text(
+                    size = 40, face = "bold", hjust = 0.5
+                  )))
 
 # ============================================================
 # Overall combined plot
@@ -610,7 +610,7 @@ overall_combined_plot
 # ============================================================
 
 ggsave(
-  filename = "combined_surrogacy_overall.pdf",
+  filename = "Figure3.pdf",
   plot = overall_combined_plot,
   path  = application_figures_folder,
   width = 40,

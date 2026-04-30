@@ -22,11 +22,12 @@ all_noNorm_eset <- readRDS(p_load_expression)
 
 # First we must preprocess the BG3M_raw raw data into a .gmt format
 
-# Member genes 
+# Member genes
 genesets <- strsplit(BG3M_raw$`Member genes`, ",\\s*")
 
 # Trim spaces and remove duplicates/empties
-genesets <- lapply(genesets, function(x) unique(trimws(x[x != ""])))
+genesets <- lapply(genesets, function(x)
+  unique(trimws(x[x != ""])))
 
 BG3M <- list(
   genesets = genesets,
@@ -98,4 +99,3 @@ p_save <- fs::path(processed_data_folder, "BG3M_processed.rds")
 saveRDS(BG3M, file = p_save)
 
 rm(list = ls())
-

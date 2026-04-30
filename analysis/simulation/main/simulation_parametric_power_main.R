@@ -221,7 +221,7 @@ p3 <- ggplot(results_plot3,
              )) +
   geom_line(size = 1.2, alpha = 0.65) +
   geom_point(size = 3, alpha = 0.65) +
-  facet_wrap( ~ M, labeller = labeller(
+  facet_wrap(~ M, labeller = labeller(
     M = function(x)
       paste("M =", x)
   )) +
@@ -248,7 +248,7 @@ p3
 
 # Save
 ggsave(
-  filename = "power_lines.pdf",
+  filename = "Figure2.pdf",
   path = simulation_figures_folder,
   plot = p3,
   width = 40,

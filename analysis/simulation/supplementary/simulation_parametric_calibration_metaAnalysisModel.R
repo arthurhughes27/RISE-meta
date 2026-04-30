@@ -69,8 +69,10 @@ results_list <- vector("list", nrow(results))
 seeds <- sample.int(n = .Machine$integer.max, size = nrow(results))
 
 # Add structure to skip for loop if results already exist
-output_file <- fs::path(simulation_results_folder,
-                        "simulation_parametric_calibration_metaAnalysisModel.rds")
+output_file <- fs::path(
+  simulation_results_folder,
+  "simulation_parametric_calibration_metaAnalysisModel.rds"
+)
 
 if (file.exists(output_file)) {
   message("Output already exists: skipping full simulation loop.")
@@ -254,7 +256,7 @@ p1 <- ggplot(plot_df,
 p1
 
 ggsave(
-  filename = "lineplot_metaAnalysisModel.pdf",
+  filename = "WebFigure4.pdf",
   path = simulation_figures_folder,
   plot = p1,
   width = 50,

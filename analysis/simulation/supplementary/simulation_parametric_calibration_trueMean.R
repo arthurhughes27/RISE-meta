@@ -31,10 +31,11 @@ M_grid <- c(25)
 nm_grid = c(250)
 
 # Grid of maximum between-study variability values
-u_tau_max_vals <- c(epsilon/10, epsilon, epsilon*10)
+u_tau_max_vals <- c(epsilon / 10, epsilon, epsilon * 10)
 
 # Grid of maximum within-study variability values
-u_nu_max_vals <- c(epsilon/100 ,epsilon/10, epsilon, epsilon*10, epsilon*100)
+u_nu_max_vals <- c(epsilon / 100 , epsilon / 10, epsilon, epsilon * 10, epsilon *
+                     100)
 
 # Grid of alpha values for the calibration plot
 alpha_grid <- c(0.05)
@@ -54,7 +55,7 @@ results <- expand.grid(
   nm = nm_grid,
   u_tau_max = u_tau_max_vals,
   u_nu_max = u_nu_max_vals,
-  model_specification = model_specification_grid, 
+  model_specification = model_specification_grid,
   test = test_grid,
   invalid_mean_discrete = invalid_mean_discrete_grid,
   stringsAsFactors = FALSE
@@ -81,77 +82,89 @@ if (file.exists(output_file)) {
 }
 
 if (!skip_loop) {
-
-for (i in seq_len(nrow(results))) {
-  
-  M <- results$M[i]
-  sample_sizes <- rep(results$nm[i], M)
-  u_tau_max <- results$u_tau_max[i]
-  u_nu_max <- results$u_nu_max[i]
-  model_specification = results$model_specification[i]
-  test = results$test[i]
-  invalid_mean_discrete = c(-results$invalid_mean_discrete[i], results$invalid_mean_discrete[i])
-  
-  # --- DATA GENERATION ---
-  data <- generate.example.data.highdim.multistudy(
-    epsilon = epsilon,
-    M = M,
-    sample_sizes = sample_sizes,
-    J = J,
-    prop_valid = 0, # 0% valid surrogates
-    u_tau_min = 0,
-    u_tau_max = u_tau_max,
-    u_nu_min = 0,
-    u_nu_max = u_nu_max,
-    prop_invalid_under = 0.5,
-    invalid_at_boundary = FALSE,
-    invalid_mean_discrete = invalid_mean_discrete, 
-    seed = seeds[i]
-  )
-  
-  # Storage for p-values
-  p_vals <- numeric(J)
-  
-  for (j in seq_len(J)) { # For each marker
-    resj <- delta.reml.meta(
-      delta = data$delta[, j],
-      sd.delta = data$sd.delta[, j],
+  for (i in seq_len(nrow(results))) {
+    M <- results$M[i]
+    sample_sizes <- rep(results$nm[i], M)
+    u_tau_max <- results$u_tau_max[i]
+    u_nu_max <- results$u_nu_max[i]
+    model_specification = results$model_specification[i]
+    test = results$test[i]
+    invalid_mean_discrete = c(-results$invalid_mean_discrete[i],
+                              results$invalid_mean_discrete[i])
+    
+    # --- DATA GENERATION ---
+    data <- generate.example.data.highdim.multistudy(
       epsilon = epsilon,
-      alternative = "two.sided",
-      test = test,
-      meta.analysis.method = model_specification
+      M = M,
+      sample_sizes = sample_sizes,
+      J = J,
+      prop_valid = 0,
+      # 0% valid surrogates
+      u_tau_min = 0,
+      u_tau_max = u_tau_max,
+      u_nu_min = 0,
+      u_nu_max = u_nu_max,
+      prop_invalid_under = 0.5,
+      invalid_at_boundary = FALSE,
+      invalid_mean_discrete = invalid_mean_discrete,
+      seed = seeds[i]
     )
-    p_vals[j] <- resj$results$p
+    
+    # Storage for p-values
+    p_vals <- numeric(J)
+    
+    for (j in seq_len(J)) {
+      # For each marker
+      resj <- delta.reml.meta(
+        delta = data$delta[, j],
+        sd.delta = data$sd.delta[, j],
+        epsilon = epsilon,
+        alternative = "two.sided",
+        test = test,
+        meta.analysis.method = model_specification
+      )
+      p_vals[j] <- resj$results$p
+    }
+    
+    # Derive FPR for each value of alpha
+    fpr_vec <- colMeans(outer(p_vals, alpha_grid, "<"), na.rm = TRUE)
+    
+    # Store results
+    results_list[[i]] <- tibble(
+      M = M,
+      nm = results$nm[i],
+      u_tau_max = u_tau_max,
+      u_nu_max = u_nu_max,
+      test = test,
+      meta.analysis.method = model_specification,
+      invalid_mean_discrete = invalid_mean_discrete,
+      alpha = alpha_grid,
+      fpr = fpr_vec
+    )
   }
   
-  # Derive FPR for each value of alpha
-  fpr_vec <- colMeans(outer(p_vals, alpha_grid, "<"), na.rm = TRUE)
+  # Extract results into a dataframe
+  results <- bind_rows(results_list)
   
-  # Store results 
-  results_list[[i]] <- tibble(
-    M = M,
-    nm = results$nm[i],
-    u_tau_max = u_tau_max,
-    u_nu_max = u_nu_max,
-    test = test,
-    meta.analysis.method = model_specification,
-    invalid_mean_discrete = invalid_mean_discrete,
-    alpha = alpha_grid,
-    fpr = fpr_vec
+  # Save results
+  saveRDS(
+    results,
+    file = fs::path(
+      simulation_results_folder,
+      "simulation_parametric_calibration_trueMean.rds"
+    )
   )
-}
-
-# Extract results into a dataframe
-results <- bind_rows(results_list)
-
-# Save results
-saveRDS(results, file = fs::path(simulation_results_folder, "simulation_parametric_calibration_trueMean.rds"))
 } else {
-  results = readRDS(fs::path(simulation_results_folder, "simulation_parametric_calibration_trueMean.rds"))
+  results = readRDS(
+    fs::path(
+      simulation_results_folder,
+      "simulation_parametric_calibration_trueMean.rds"
+    )
+  )
 }
 
 fixed_alpha <- 0.05
-u_nu_max_fixed <- epsilon/10
+u_nu_max_fixed <- epsilon / 10
 
 # Helper for legend labels relative to epsilon
 rel_eps_text <- function(x, eps = epsilon) {
@@ -168,13 +181,8 @@ rel_eps_text <- function(x, eps = epsilon) {
 }
 
 plot_df <- results %>%
-  filter(
-    alpha == fixed_alpha,
-    u_nu_max == u_nu_max_fixed
-  ) %>%
-  mutate(
-    u_tau_max = factor(u_tau_max, levels = sort(unique(u_tau_max)))
-  ) %>%
+  filter(alpha == fixed_alpha, u_nu_max == u_nu_max_fixed) %>%
+  mutate(u_tau_max = factor(u_tau_max, levels = sort(unique(u_tau_max)))) %>%
   arrange(u_tau_max, invalid_mean_discrete)
 
 ylim <- 0.075
@@ -188,32 +196,30 @@ plot_right <- plot_df %>%
 
 # Custom x-axis breaks and labels
 x_breaks <- sort(unique(c(
-  pretty(plot_df$invalid_mean_discrete, n = 6),
-  -epsilon, epsilon
+  pretty(plot_df$invalid_mean_discrete, n = 6), -epsilon, epsilon
 )))
 
 x_labels <- function(x) {
   out <- character(length(x))
   out[abs(x + epsilon) < 1e-8] <- parse(text = "-epsilon")
   out[abs(x - epsilon) < 1e-8] <- parse(text = "epsilon")
-  out[!(abs(x + epsilon) < 1e-8 | abs(x - epsilon) < 1e-8)] <- as.character(x[!(abs(x + epsilon) < 1e-8 | abs(x - epsilon) < 1e-8)])
+  out[!(abs(x + epsilon) < 1e-8 |
+          abs(x - epsilon) < 1e-8)] <- as.character(x[!(abs(x + epsilon) < 1e-8 |
+                                                          abs(x - epsilon) < 1e-8)])
   out
 }
 
-p2_cols <- rev(c(
-  "#7BD64A",
-  "#0B8500",
-  "#003309"
-))
+p2_cols <- rev(c("#7BD64A", "#0B8500", "#003309"))
 
 names(p2_cols) <- levels(plot_df$u_tau_max)
 
-p1 <- ggplot(plot_df, aes(
-  x = invalid_mean_discrete,
-  y = fpr,
-  color = u_tau_max,
-  group = u_tau_max
-)) +
+p1 <- ggplot(plot_df,
+             aes(
+               x = invalid_mean_discrete,
+               y = fpr,
+               color = u_tau_max,
+               group = u_tau_max
+             )) +
   geom_rect(
     inherit.aes = FALSE,
     aes(
@@ -226,16 +232,12 @@ p1 <- ggplot(plot_df, aes(
     alpha = 1,
     show.legend = TRUE
   ) +
-  geom_line(
-    data = plot_left,
-    linewidth = 1.2,
-    alpha = 0.6
-  ) +
-  geom_line(
-    data = plot_right,
-    linewidth = 1.2,
-    alpha = 0.6
-  ) +
+  geom_line(data = plot_left,
+            linewidth = 1.2,
+            alpha = 0.6) +
+  geom_line(data = plot_right,
+            linewidth = 1.2,
+            alpha = 0.6) +
   geom_point(size = 2, alpha = 0.5) +
   geom_hline(
     yintercept = fixed_alpha,
@@ -252,12 +254,15 @@ p1 <- ggplot(plot_df, aes(
   scale_color_manual(
     values = p2_cols,
     name = expression(paste("Max between-study variance")),
-    labels = function(x) parse(text = rel_eps_text(x))
+    labels = function(x)
+      parse(text = rel_eps_text(x))
   ) +
   scale_fill_manual(
     name = NULL,
     values = c("Valid region" = "#C1C1C1"),
-    labels = c(expression(paste("Valid region: ", -epsilon, " to ", epsilon)))
+    labels = c(expression(
+      paste("Valid region: ", -epsilon, " to ", epsilon)
+    ))
   ) +
   scale_x_continuous(
     breaks = x_breaks,
@@ -266,16 +271,15 @@ p1 <- ggplot(plot_df, aes(
       lab[abs(x + epsilon) < 1e-8] <- "-epsilon"
       lab[abs(x - epsilon) < 1e-8] <- "epsilon"
       lab[!(abs(x + epsilon) < 1e-8 | abs(x - epsilon) < 1e-8)] <-
-        as.character(x[!(abs(x + epsilon) < 1e-8 | abs(x - epsilon) < 1e-8)])
+        as.character(x[!(abs(x + epsilon) < 1e-8 |
+                           abs(x - epsilon) < 1e-8)])
       parse(text = lab)
     }
   ) +
   coord_cartesian(ylim = c(0, ylim)) +
-  labs(
-    x = expression(paste("True mean of invalid surrogates ", mu)),
-    y = "Empirical FPR",
-    title = "Empirical false positive rates across invalid surrogate mean"
-  ) +
+  labs(x = expression(paste("True mean of invalid surrogates ", mu)),
+       y = "Empirical FPR",
+       title = "Empirical false positive rates across invalid surrogate mean") +
   theme_minimal(base_size = 25) +
   theme(
     plot.title = element_text(size = 35, hjust = 0.5),
@@ -286,18 +290,13 @@ p1 <- ggplot(plot_df, aes(
     axis.title = element_text(size = 35),
     legend.position = "right"
   ) +
-  guides(
-    fill = guide_legend(order = 1),
-    color = guide_legend(
-      order = 2,
-      override.aes = list(fill = NA, alpha = 1)
-    )
-  )
+  guides(fill = guide_legend(order = 1),
+         color = guide_legend(order = 2, override.aes = list(fill = NA, alpha = 1)))
 
 p1
 
 ggsave(
-  filename = "lineplot_trueMean.pdf",
+  filename = "WebFigure5.pdf",
   path = simulation_figures_folder,
   plot = p1,
   width = 45,

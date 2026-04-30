@@ -7,12 +7,15 @@ descriptive_figures_folder <- fs::path("output", "figures", "descriptive")
 
 # Load merged gene expression dataset
 hipc_merged_all_noNorm <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
-raw_response_influenzain = readRDS(fs::path(processed_data_folder, "raw_response_influenzain_all_noNorm.rds"))
+raw_response_influenzain = readRDS(fs::path(
+  processed_data_folder,
+  "raw_response_influenzain_all_noNorm.rds"
+))
 
 # Gene columns present in the data with no missing values
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where(~ !any(is.na(.)))) %>%
+  select(where( ~ !any(is.na(.)))) %>%
   colnames()
 
 # Inclusion criteria: inactivated influenza vaccine, MFC available, observations
@@ -24,10 +27,8 @@ hipc_merged_all_noNorm_filtered <- hipc_merged_all_noNorm %>%
     study_time_collected %in% c(0, 1, 2, 3, 7)
   ) %>%
   group_by(participant_id) %>%
-  filter(
-    sum(study_time_collected == 0) == 1,
-    sum(study_time_collected > 0) > 0
-  ) %>%
+  filter(sum(study_time_collected == 0) == 1,
+         sum(study_time_collected > 0) > 0) %>%
   ungroup() %>%
   select(
     participant_id,
@@ -87,7 +88,11 @@ time_levels <- counts %>%
 
 counts <- counts %>%
   mutate(
-    study_time_collected = factor(as.character(study_time_collected), levels = time_levels, ordered = TRUE),
+    study_time_collected = factor(
+      as.character(study_time_collected),
+      levels = time_levels,
+      ordered = TRUE
+    ),
     # Reverse study order so the first study appears at the top of the y-axis
     study_accession = factor(study_accession, levels = rev(levels(study_accession)))
   )
@@ -102,7 +107,13 @@ p1 <- ggplot(counts, aes(x = study_time_collected, y = study_accession)) +
     alpha = 0.8,
     show.legend = FALSE
   ) +
-  geom_text(aes(label = n), colour = "white", size = 3.5, vjust = 0.5, show.legend = TRUE) +
+  geom_text(
+    aes(label = n),
+    colour = "white",
+    size = 3.5,
+    vjust = 0.5,
+    show.legend = TRUE
+  ) +
   scale_fill_identity(guide = "none") +
   scale_size_area(max_size = 28, guide = "none") +
   labs(
@@ -124,7 +135,7 @@ p1 <- ggplot(counts, aes(x = study_time_collected, y = study_accession)) +
 p1
 
 ggsave(
-  filename = "transcriptomic_samples_influenzain.pdf",
+  filename = "WebFigure1.pdf",
   path     = descriptive_figures_folder,
   plot     = p1,
   width    = 30,

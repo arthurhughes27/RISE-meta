@@ -76,10 +76,14 @@ summary_df <- bind_rows(
 prev_n <- counts3$individuals
 
 hipc_merged_all_noNorm <- hipc_merged_all_noNorm %>%
-  filter(
-    (!is.na(immResp_mean_hai_pre_value) & !is.na(immResp_mean_hai_post_value)) |
-      (!is.na(immResp_mean_nAb_pre_value) & !is.na(immResp_mean_nAb_post_value))
-  )
+  filter((
+    !is.na(immResp_mean_hai_pre_value) &
+      !is.na(immResp_mean_hai_post_value)
+  ) |
+    (
+      !is.na(immResp_mean_nAb_pre_value) &
+        !is.na(immResp_mean_nAb_post_value)
+    ))
 
 counts4 <- get_counts(hipc_merged_all_noNorm)
 summary_df <- bind_rows(

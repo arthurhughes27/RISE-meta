@@ -28,7 +28,7 @@ hyperparameter_list = list(
   # paired mode
   paired.studies = NULL,
   # which studies are paired
-  evaluate.weights = TRUE, 
+  evaluate.weights = TRUE,
   # Whether to use weighting for evaluation stage
   
   # Numeric hyperparameters for testing procedure
@@ -62,21 +62,22 @@ hyperparameter_list = list(
   # return fit plot for combined marker
   return.evaluate.results = TRUE,
   # return evaluation results for screening data
-  return.screen.plot = TRUE, 
+  return.screen.plot = TRUE,
   # return screening plot
   return.all.weights = FALSE,
   # return weights for all predictors
   
   # Predictor transformation parameters
   aggregation_function = mean,
-  # Function defining aggregation from gene to geneset level 
+  # Function defining aggregation from gene to geneset level
   geneset_definition = "BTM",
   # Argument stating the definition of the genesets (options are BTM or BG3M)
   
   # Other hyperparameters
-  n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2,
+  n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2,
   # number of cores for parallel computing
-  screen.plot.topN = 20, # how many predictors to plot
+  screen.plot.topN = 20,
+  # how many predictors to plot
   screen.plot.point.estimate = F,
   
   # Graphical parameters
@@ -88,17 +89,21 @@ hyperparameter_list = list(
   fit.plot.height = 20
 )
 
-file_name_tag = paste0("_timepoint",
-                       hyperparameter_list$tp,
-                       "_method",
-                       hyperparameter_list$meta.analysis.method,
-                       "_test",
-                       hyperparameter_list$test,
-                       "_epsMode",
-                       hyperparameter_list$epsilon.meta.mode,
-                       ifelse(hyperparameter_list$epsilon.meta.mode == "user", 
-                          paste0("_eps", hyperparameter_list$epsilon.meta), 
-                          paste0("_power", hyperparameter_list$power.want.s.study)))
+file_name_tag = paste0(
+  "_timepoint",
+  hyperparameter_list$tp,
+  "_method",
+  hyperparameter_list$meta.analysis.method,
+  "_test",
+  hyperparameter_list$test,
+  "_epsMode",
+  hyperparameter_list$epsilon.meta.mode,
+  ifelse(
+    hyperparameter_list$epsilon.meta.mode == "user",
+    paste0("_eps", hyperparameter_list$epsilon.meta),
+    paste0("_power", hyperparameter_list$power.want.s.study)
+  )
+)
 
 # Load internal functions
 sapply(list.files("R/", pattern = "\\.R$", full.names = TRUE), source)
@@ -109,7 +114,10 @@ application_figures_folder <- fs::path("output", "figures", "application", "main
 
 # Load merged gene expression and GS_list gene set objects
 df <- readRDS(fs::path(processed_data_folder, "hipc_merged_all_noNorm.rds"))
-GS_list <- readRDS(fs::path(processed_data_folder, paste0(hyperparameter_list$geneset_definition, "_processed.rds")))
+GS_list <- readRDS(fs::path(
+  processed_data_folder,
+  paste0(hyperparameter_list$geneset_definition, "_processed.rds")
+))
 
 preprocessed_data_list = preprocess_data(
   df = df,
@@ -121,26 +129,28 @@ preprocessed_data_list = preprocess_data(
 preprocessed_data_list[["df.full"]]$participant_id %>% unique() %>% length()
 preprocessed_data_list[["df.full"]]$study_accession %>% unique() %>% length()
 
-preprocessed_data_list[["df.full"]] %>% 
-  select(participant_id, study_accession) %>% 
-  distinct() %>% 
-  group_by(study_accession) %>% 
+preprocessed_data_list[["df.full"]] %>%
+  select(participant_id, study_accession) %>%
+  distinct() %>%
+  group_by(study_accession) %>%
   summarize(n = n())
 
 df_train = preprocessed_data_list[["df.screen"]]
 df_test = preprocessed_data_list[["df.evaluate"]]
 
-predictor_names = df_train %>% 
-  dplyr::select(a1cf:zzz3) %>% 
+predictor_names = df_train %>%
+  dplyr::select(a1cf:zzz3) %>%
   colnames()
 
 # ----- Screening on training data -----
 
-train_inputs <- extract_rise_inputs(df = df_train, 
-                                    predictor_names = predictor_names, 
-                                    genesets = GS_list[["genesets"]], 
-                                    geneset_names = GS_list[["geneset.names.descriptions"]],
-                                    aggregation_function = hyperparameter_list$aggregation_function)
+train_inputs <- extract_rise_inputs(
+  df = df_train,
+  predictor_names = predictor_names,
+  genesets = GS_list[["genesets"]],
+  geneset_names = GS_list[["geneset.names.descriptions"]],
+  aggregation_function = hyperparameter_list$aggregation_function
+)
 
 # Screen for surrogate markers across studies using BH-corrected meta-analysis
 rise_screen_result <- rise.screen.meta(
@@ -168,18 +178,18 @@ rise_screen_result <- rise.screen.meta(
   screen.plot.point.estimate   = hyperparameter_list$screen.plot.point.estimate,
   return.evaluate.results      = hyperparameter_list$return.evaluate.results,
   return.fit.plot              = hyperparameter_list$return.fit.plot,
-  return.forest.plot           = hyperparameter_list$return.forest.plot, 
-  normalise.weights            = hyperparameter_list$normalise.weights, 
-  return.screen.plot           = hyperparameter_list$return.screen.plot, 
-  weight.mode                  = hyperparameter_list$weight.mode, 
-  return.all.weights           = hyperparameter_list$return.all.weights, 
-  paired.studies               = hyperparameter_list$paired.studies, 
+  return.forest.plot           = hyperparameter_list$return.forest.plot,
+  normalise.weights            = hyperparameter_list$normalise.weights,
+  return.screen.plot           = hyperparameter_list$return.screen.plot,
+  weight.mode                  = hyperparameter_list$weight.mode,
+  return.all.weights           = hyperparameter_list$return.all.weights,
+  paired.studies               = hyperparameter_list$paired.studies,
   u.y.hyp                      = hyperparameter_list$u.y.hyp
 )
 
 screen_output = extract_rise_outputs(screen_result = rise_screen_result)
 
-# LaTeX table formatting the significant results of the analysis 
+# LaTeX table formatting the significant results of the analysis
 screen_output$screen_table
 
 # Extract and show the graphics for the screening stage
@@ -193,7 +203,7 @@ screen_fit_1
 
 # Save these graphics with an informative name
 ggsave(
-  filename = paste0("screen_plot", file_name_tag, ".pdf"),
+  filename = "Figure4.pdf",
   path     = application_figures_folder,
   plot     = screen_plot_1,
   width    = hyperparameter_list$screen.plot.width,
@@ -202,11 +212,13 @@ ggsave(
 )
 
 # ----- Evaluation on test data -----
-test_inputs <- extract_rise_inputs(df_test,
-                                   predictor_names = predictor_names,
-                                   genesets = GS_list[["genesets"]],
-                                   geneset_names = GS_list[["geneset.names.descriptions"]],
-                                   aggregation_function = hyperparameter_list$aggregation_function)
+test_inputs <- extract_rise_inputs(
+  df_test,
+  predictor_names = predictor_names,
+  genesets = GS_list[["genesets"]],
+  geneset_names = GS_list[["geneset.names.descriptions"]],
+  aggregation_function = hyperparameter_list$aggregation_function
+)
 
 # Evaluate significant markers from screening on held-out test data
 rise_evaluation_result <- rise.evaluate.meta(
@@ -228,7 +240,10 @@ rise_evaluation_result <- rise.evaluate.meta(
   test                 = hyperparameter_list$test,
   epsilon.meta.mode    = hyperparameter_list$epsilon.meta.mode,
   power.want.s.study   = hyperparameter_list$power.want.s.study,
-  meta.analysis.method = hyperparameter_list$meta.analysis.method,return.fit.plot = ,return.all.evaluate = ,return.forest.plot = ,
+  meta.analysis.method = hyperparameter_list$meta.analysis.method,
+  return.fit.plot      = hyperparameter_list$return.fit.plot,
+  return.all.evaluate  = hyperparameter_list$return.all.evaluate,
+  return.forest.plot   = hyperparameter_list$return.forest.plot,
   weight.mode          = hyperparameter_list$weight.mode,
   evaluate.weights     = hyperparameter_list$evaluate.weights,
   paired.studies       = hyperparameter_list$paired.studies,
@@ -248,7 +263,7 @@ evaluation_forest_1
 evaluation_fit_1
 
 ggsave(
-  filename = paste0("evaluation_forest", file_name_tag, ".pdf"),
+  filename = "Figure5.pdf",
   path     = application_figures_folder,
   plot     = evaluation_forest_1,
   width    = hyperparameter_list$forest.plot.width,

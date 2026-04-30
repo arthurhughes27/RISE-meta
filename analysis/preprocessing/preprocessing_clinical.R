@@ -19,7 +19,7 @@ p_load <- fs::path(raw_data_folder, "all_noNorm_eset.rds")
 all_noNorm_eset <- readRDS(p_load)
 
 # Extract the clinical data as a dataframe
-hipc_clinical = all_noNorm_eset@phenoData@data %>% 
+hipc_clinical = all_noNorm_eset@phenoData@data %>%
   as.data.frame()
 
 # Data engineering
@@ -90,7 +90,7 @@ conditions_order <- c(
 )
 
 # Assign this order to the vaccine names
-hipc_clinical <- hipc_clinical %>% 
+hipc_clinical <- hipc_clinical %>%
   mutate(vaccine_name = factor(vaccine_name, levels = conditions_order))
 
 # Same for the shortened names
@@ -112,7 +112,7 @@ conditions_order_short <- c(
 
 
 # Assign this order to the shortened vaccine names
-hipc_clinical <- hipc_clinical %>% 
+hipc_clinical <- hipc_clinical %>%
   mutate(vaccine_name_short = factor(vaccine_name_short, levels = conditions_order_short))
 
 # Define a colour for each vaccine
@@ -137,7 +137,7 @@ color_palette_vaccine = c(
 # Write a helper function to assign the colours
 assign_color <- function(vaccine_name) {
   return(color_palette_vaccine[match(hipc_clinical$vaccine_name,
-                             levels(hipc_clinical$vaccine_name))])
+                                     levels(hipc_clinical$vaccine_name))])
 }
 
 # Assign the colours to the vaccine names
@@ -145,20 +145,20 @@ hipc_clinical$vaccine_colour <-
   assign_color(hipc_clinical$vaccine_name)
 
 # Define an ordering for the studies (this is for later to make figures consistent)
-study_descriptions = hipc_clinical %>% 
-  dplyr::select(vaccine_name, study_accession) %>% 
-  distinct() %>% 
+study_descriptions = hipc_clinical %>%
+  dplyr::select(vaccine_name, study_accession) %>%
+  distinct() %>%
   arrange(vaccine_name)
 
-# There are three studies which include multiple vaccines 
-# SDY1260 and SDY1325 for Meningococcus CJ and PS, 
-# SDY269 for influenza IN and LV, 
+# There are three studies which include multiple vaccines
+# SDY1260 and SDY1325 for Meningococcus CJ and PS,
+# SDY269 for influenza IN and LV,
 # SDY180 for influenza IN and Pneumococcus (PS)
 # Define a new variable renaming these to "SDYXa" (CJ, IN) and "SDYXb" (PS, LV) where X is replaced with the appropriate study number
 hipc_clinical = hipc_clinical %>%
-  mutate(study_accession_unique = study_accession) 
+  mutate(study_accession_unique = study_accession)
 
-hipc_clinical = hipc_clinical %>% 
+hipc_clinical = hipc_clinical %>%
   mutate(
     study_accession_unique = ifelse(
       study_accession_unique == "SDY1260" &
@@ -225,20 +225,20 @@ hipc_clinical = hipc_clinical %>%
   )
 
 # Redefine the study order
-study_descriptions = hipc_clinical %>% 
-  dplyr::select(vaccine_name, study_accession_unique) %>% 
-  distinct() %>% 
+study_descriptions = hipc_clinical %>%
+  dplyr::select(vaccine_name, study_accession_unique) %>%
+  distinct() %>%
   arrange(vaccine_name)
 
 study_order <- study_descriptions$study_accession_unique
 
 # Assign this order to the vaccine names
-hipc_clinical <- hipc_clinical %>% 
+hipc_clinical <- hipc_clinical %>%
   mutate(study_accession_unique = factor(study_accession_unique, levels = study_order))
 
 # Define a colour for each study
 ## This colour palette was chosen to represent 30 studies across 13 vaccines
-## The study colours are chosen to be a gradient within each vaccine based on the previously chosen vaccine colours 
+## The study colours are chosen to be a gradient within each vaccine based on the previously chosen vaccine colours
 ## Using the "supercolorpalette" tool (https://supercolorpalette.com)
 color_palette_study = c(
   "#b94a73", # Tuberculosis (RVV)
@@ -279,8 +279,10 @@ color_palette_study = c(
 
 # Write a helper function to assign the colours
 assign_color <- function(study_accession_unique) {
-  return(color_palette_study[match(hipc_clinical$study_accession_unique,
-                                     levels(hipc_clinical$study_accession_unique))])
+  return(color_palette_study[match(
+    hipc_clinical$study_accession_unique,
+    levels(hipc_clinical$study_accession_unique)
+  )])
 }
 
 # Assign the colours to the vaccine names

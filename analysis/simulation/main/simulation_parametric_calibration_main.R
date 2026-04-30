@@ -378,7 +378,7 @@ combined_plot <- (p1 / plot_spacer() / p2) +
 combined_plot
 
 ggsave(
-  filename = "calibration_grids_combined.pdf",
+  filename = "Figure1.pdf",
   path = simulation_figures_folder,
   plot = combined_plot,
   width = 150,

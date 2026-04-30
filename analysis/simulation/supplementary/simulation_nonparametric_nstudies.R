@@ -31,7 +31,7 @@ hipc_merged_all_noNorm <- readRDS(p_load_expr_all_noNorm)
 # Extract the names of the markers
 gene_names <- hipc_merged_all_noNorm %>%
   select(a1cf:zzz3) %>%
-  select(where( ~ !any(is.na(.)))) %>%
+  select(where(~ !any(is.na(.)))) %>%
   colnames()
 
 # Set the nominal significance level
@@ -185,7 +185,8 @@ if (file.exists(p_save)) {
         )
         
         if (row == start_row &&
-            !is.null(current_fpr_vec) && length(current_fpr_vec) == J) {
+            !is.null(current_fpr_vec) &&
+            length(current_fpr_vec) == J) {
           {
             fpr_vec <- current_fpr_vec
           }
@@ -236,7 +237,8 @@ if (file.exists(p_save)) {
                 p.correction = "none",
                 show.pooled.effect = TRUE,
                 return.study.similarity.plot = FALSE,
-                n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2,
+                n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE) /
+                  2,
                 return.fit.plot = FALSE,
                 return.forest.plot = FALSE,
                 normalise.weights = FALSE,
@@ -345,7 +347,7 @@ p1 <- ggplot(fpr_df, aes(x = n_studies, y = fpr)) +
 p1
 
 ggsave(
-  filename = "simulation_nonparametric_1_nstudies.pdf",
+  filename = "WebFigure8.pdf",
   path = figures_folder,
   plot = p1,
   width = 40,

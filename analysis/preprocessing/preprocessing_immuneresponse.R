@@ -38,7 +38,7 @@ hipc_clinical_all_noNorm = readRDS(p_load_clinical)
 # First, filter each dataframe to only contain information on participants for which we have gene expression data
 # Find identifiers of participants with gene expression measurements
 participants = hipc_clinical_all_noNorm %>%
-  filter(vaccine_name %in% c("Influenza (IN)", "Influenza (LV)")) %>% 
+  filter(vaccine_name %in% c("Influenza (IN)", "Influenza (LV)")) %>%
   pull(participant_id) %>%
   unique()
 
@@ -62,19 +62,21 @@ response_nAb = response_nAb %>%
 
 # Now merge all the raw response data
 raw_response_influenzain = bind_rows(response_nAb, response_hai) %>%
-  select(-gender) %>% 
+  select(-gender) %>%
   arrange(participant_id) %>%
   distinct()
 
 # First get the studies and other clinical data corresponding to each participant id
 hipc_studies = hipc_clinical_all_noNorm %>%
-  select(participant_id,
-         age_imputed,
-         gender,
-         study_accession,
-         vaccine,
-         vaccine_type,
-         pathogen) %>%
+  select(
+    participant_id,
+    age_imputed,
+    gender,
+    study_accession,
+    vaccine,
+    vaccine_type,
+    pathogen
+  ) %>%
   distinct()
 
 # Merge the study names into the immune response data (it is not directly given)
@@ -85,7 +87,7 @@ raw_response_influenzain = merge(x = raw_response_influenzain,
   select(
     participant_id,
     study_accession,
-    age_imputed, 
+    age_imputed,
     gender,
     response_strain_analyte,
     assay,
@@ -94,7 +96,8 @@ raw_response_influenzain = merge(x = raw_response_influenzain,
   )
 
 # Use fs::path() to specify the data path robustly
-p_save <- fs::path(processed_data_folder, "raw_response_influenzain_all_noNorm.rds")
+p_save <- fs::path(processed_data_folder,
+                   "raw_response_influenzain_all_noNorm.rds")
 
 # Save dataframe
 saveRDS(raw_response_influenzain, file = p_save)
@@ -113,7 +116,9 @@ raw_response_influenzain = raw_response_influenzain %>%
 response_pre <- raw_response_influenzain %>%
   filter(study_time_collected <= 0) %>%
   group_by(participant_id, response_strain_analyte, assay) %>%
-  slice_max(order_by = study_time_collected, n = 1, with_ties = FALSE) %>%
+  slice_max(order_by = study_time_collected,
+            n = 1,
+            with_ties = FALSE) %>%
   ungroup() %>%
   mutate(study_time_collected = 0)
 
@@ -123,14 +128,19 @@ response_pre <- raw_response_influenzain %>%
 response_post <- raw_response_influenzain %>%
   filter(between(study_time_collected, 21, 35)) %>%
   group_by(participant_id, response_strain_analyte, assay) %>%
-  arrange(abs(study_time_collected - 28), study_time_collected, .by_group = TRUE) %>%
+  arrange(abs(study_time_collected - 28),
+          study_time_collected,
+          .by_group = TRUE) %>%
   slice_head(n = 1) %>%
   ungroup() %>%
   mutate(study_time_collected = 28)
 
 # 4) Combine the selected pre and post measurements
 raw_response_influenzain <- bind_rows(response_pre, response_post) %>%
-  arrange(participant_id, response_strain_analyte, assay, study_time_collected)
+  arrange(participant_id,
+          response_strain_analyte,
+          assay,
+          study_time_collected)
 
 # Now derive MFC values, taking most recent measurement as baseline in the case where there are two pre-vaccination measurements
 
@@ -140,20 +150,39 @@ pre_vax <- raw_response_influenzain %>%
   slice_max(study_time_collected, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
   rename(response_MFC_pre_value = value_preferred,
-         response_MFC_pre_time = study_time_collected) %>% 
-  select(participant_id, study_accession, assay, response_strain_analyte, response_MFC_pre_time, response_MFC_pre_value)
+         response_MFC_pre_time = study_time_collected) %>%
+  select(
+    participant_id,
+    study_accession,
+    assay,
+    response_strain_analyte,
+    response_MFC_pre_time,
+    response_MFC_pre_value
+  )
 
 post_vax <- raw_response_influenzain %>%
   filter(study_time_collected > 0) %>%
   rename(response_MFC_post_value = value_preferred,
-         response_MFC_post_time = study_time_collected) %>% 
-  select(participant_id, study_accession, assay, response_strain_analyte, response_MFC_post_time, response_MFC_post_value)
+         response_MFC_post_time = study_time_collected) %>%
+  select(
+    participant_id,
+    study_accession,
+    assay,
+    response_strain_analyte,
+    response_MFC_post_time,
+    response_MFC_post_value
+  )
 
 # Now we merge pre- and post- values to get a dataframe in wide format with one line per unique combination of participant/assay/strain-analyte
 merged_vax <- full_join(
   pre_vax,
   post_vax,
-  by = c("participant_id", "study_accession","response_strain_analyte", "assay"),
+  by = c(
+    "participant_id",
+    "study_accession",
+    "response_strain_analyte",
+    "assay"
+  ),
   relationship = "many-to-many"
 ) %>%
   select(
@@ -169,8 +198,7 @@ merged_vax <- full_join(
 
 # Now we can exclude any rows with NA values in either pre- or post-.
 merged_vax = merged_vax %>%
-  filter(!is.na(response_MFC_pre_value),
-         !is.na(response_MFC_post_value))
+  filter(!is.na(response_MFC_pre_value),!is.na(response_MFC_post_value))
 
 # Derive the log2 fold changes.
 response_MFC_df <- merged_vax %>%
@@ -207,7 +235,7 @@ response_MFC_df <- merged_vax %>%
     response_MFC_post_time,
     response_MFC_pre_value,
     response_MFC_post_value,
-    response_MFC, 
+    response_MFC,
     response_log2_MFC_pre_value,
     response_log2_MFC_post_value,
     response_log2_MFC
@@ -273,24 +301,32 @@ max_response_MFC_df_hai = max_response_MFC_df_each %>%
 mean_response_nAb <- response_MFC_df %>%
   filter(assay == "nAb") %>%
   group_by(participant_id, study_accession) %>%
-  summarise(immResp_mean_nAb_pre_value  = mean(response_MFC_pre_value,  na.rm = TRUE),
-            immResp_mean_nAb_post_value = mean(response_MFC_post_value, na.rm = TRUE),
-            .groups = "drop") %>% 
-  mutate(immResp_mean_nAb_log2_pre_value = log2(immResp_mean_nAb_pre_value),
-         immResp_mean_nAb_log2_post_value = log2(immResp_mean_nAb_post_value),
-         immResp_mean_nAb_FC = immResp_mean_nAb_post_value/immResp_mean_nAb_pre_value,
-         immResp_mean_nAb_log2_FC = log2(immResp_mean_nAb_FC))
+  summarise(
+    immResp_mean_nAb_pre_value  = mean(response_MFC_pre_value, na.rm = TRUE),
+    immResp_mean_nAb_post_value = mean(response_MFC_post_value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    immResp_mean_nAb_log2_pre_value = log2(immResp_mean_nAb_pre_value),
+    immResp_mean_nAb_log2_post_value = log2(immResp_mean_nAb_post_value),
+    immResp_mean_nAb_FC = immResp_mean_nAb_post_value / immResp_mean_nAb_pre_value,
+    immResp_mean_nAb_log2_FC = log2(immResp_mean_nAb_FC)
+  )
 
 mean_response_hai <- response_MFC_df %>%
   filter(assay == "hai") %>%
   group_by(participant_id, study_accession) %>%
-  summarise(immResp_mean_hai_pre_value  = mean(response_MFC_pre_value,  na.rm = TRUE),
-            immResp_mean_hai_post_value = mean(response_MFC_post_value, na.rm = TRUE),
-            .groups = "drop") %>% 
-  mutate(immResp_mean_hai_log2_pre_value = log2(immResp_mean_hai_pre_value),
-         immResp_mean_hai_log2_post_value = log2(immResp_mean_hai_post_value),
-         immResp_mean_hai_FC = immResp_mean_hai_post_value/immResp_mean_hai_pre_value,
-         immResp_mean_hai_log2_FC = log2(immResp_mean_hai_FC))
+  summarise(
+    immResp_mean_hai_pre_value  = mean(response_MFC_pre_value, na.rm = TRUE),
+    immResp_mean_hai_post_value = mean(response_MFC_post_value, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    immResp_mean_hai_log2_pre_value = log2(immResp_mean_hai_pre_value),
+    immResp_mean_hai_log2_post_value = log2(immResp_mean_hai_post_value),
+    immResp_mean_hai_FC = immResp_mean_hai_post_value / immResp_mean_hai_pre_value,
+    immResp_mean_hai_log2_FC = log2(immResp_mean_hai_FC)
+  )
 
 hipc_immResp <- list(
   max_response_MFC_df_any,
@@ -314,8 +350,14 @@ library(tidyr)
 
 # 1) pivot pre/post into long time column and z-score within (study x assay x strain x time)
 std_long <- response_MFC_df %>%
-  select(participant_id, study_accession, assay, response_strain_analyte,
-         response_MFC_pre_value, response_MFC_post_value) %>%
+  select(
+    participant_id,
+    study_accession,
+    assay,
+    response_strain_analyte,
+    response_MFC_pre_value,
+    response_MFC_post_value
+  ) %>%
   pivot_longer(
     cols = c(response_MFC_pre_value, response_MFC_post_value),
     names_to = "time",
@@ -326,18 +368,30 @@ std_long <- response_MFC_df %>%
   mutate(
     grp_mean = mean(value, na.rm = TRUE),
     grp_sd   = sd(value, na.rm = TRUE),
-    value_z  = ifelse(is.na(value), NA_real_,
-                      ifelse(is.na(grp_sd) | grp_sd == 0, 0, (value - grp_mean) / grp_sd))
+    value_z  = ifelse(is.na(value), NA_real_, ifelse(
+      is.na(grp_sd) | grp_sd == 0, 0, (value - grp_mean) / grp_sd
+    ))
   ) %>%
   ungroup() %>%
-  select(participant_id, study_accession, assay, response_strain_analyte, time, value_z)
+  select(participant_id,
+         study_accession,
+         assay,
+         response_strain_analyte,
+         time,
+         value_z)
 
 # 2) summarise per participant/study/assay/time: mean and max of z-scores across strains
 std_summary <- std_long %>%
   group_by(participant_id, study_accession, assay, time) %>%
   summarise(
-    mean_std = if(all(is.na(value_z))) NA_real_ else mean(value_z, na.rm = TRUE),
-    max_std  = if(all(is.na(value_z))) NA_real_ else max(value_z, na.rm = TRUE),
+    mean_std = if (all(is.na(value_z)))
+      NA_real_
+    else
+      mean(value_z, na.rm = TRUE),
+    max_std  = if (all(is.na(value_z)))
+      NA_real_
+    else
+      max(value_z, na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -386,7 +440,8 @@ std_cols <- list(
   immResp_max_hai_std_pre,
   immResp_max_hai_std_post
 ) %>%
-  purrr::reduce(function(x, y) full_join(x, y, by = c("participant_id", "study_accession"))) %>%
+  purrr::reduce(function(x, y)
+    full_join(x, y, by = c("participant_id", "study_accession"))) %>%
   select(
     participant_id,
     study_accession,

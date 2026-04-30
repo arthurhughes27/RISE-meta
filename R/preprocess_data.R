@@ -9,7 +9,7 @@ preprocess_data = function(df,
   # Gene columns present in the data with no missing values
   gene_names <- df %>%
     select(a1cf:zzz3) %>%
-    select(where(~ !any(is.na(.)))) %>%
+    select(where( ~ !any(is.na(.)))) %>%
     colnames()
   
   # Define the timepoints to keep
@@ -17,7 +17,9 @@ preprocess_data = function(df,
   
   # Define the studies to use neutralising antibody response
   nab_studies = df %>%
-    dplyr::select(study_accession, immResp_mean_nAb_pre_value, immResp_mean_hai_pre_value) %>%
+    dplyr::select(study_accession,
+                  immResp_mean_nAb_pre_value,
+                  immResp_mean_hai_pre_value) %>%
     # filter(is.na(immResp_mean_hai_pre_value)) %>% # uncomment to take HAI as priority
     filter(!is.na(immResp_mean_nAb_pre_value)) %>%
     pull(study_accession) %>%
@@ -77,7 +79,7 @@ preprocess_data = function(df,
     arrange(participant_id)
   
   # Subsampling if desired
-  if (!(screen.fraction %in% c(0,1))){
+  if (!(screen.fraction %in% c(0, 1))) {
     # Sample 66% of participants per study for training; remainder becomes test set
     train_indices <- df_filtered %>%
       distinct(study_accession, participant_id) %>%
@@ -90,19 +92,21 @@ preprocess_data = function(df,
     
     df_test <- df_filtered %>%
       anti_join(train_indices, by = c("study_accession", "participant_id"))
-  } else if (screen.fraction == 1){
+  } else if (screen.fraction == 1) {
     df_train <- df_filtered
     
     df_test = NULL
-  } else if (screen.fraction == 0){
+  } else if (screen.fraction == 0) {
     df_train <- NULL
     
     df_test = df_filtered
   }
   
-  res = list("df.full" = df_filtered,
-             "df.screen" = df_train,
-             "df.evaluate" = df_test)
+  res = list(
+    "df.full" = df_filtered,
+    "df.screen" = df_train,
+    "df.evaluate" = df_test
+  )
   
   return(res)
 }

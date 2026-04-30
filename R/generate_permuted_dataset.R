@@ -11,32 +11,36 @@
 #'   row per participant. Must contain columns: participant_id, study_time_collected,
 #'   study_accession, response_pre, response_post, and all columns in gene_names.
 #' @param gene_names Character vector of gene/biomarker column names.
-#' @param seed numeric seed for reproducibility. 
+#' @param seed numeric seed for reproducibility.
 #' @param n_within_study numeric value giving a fixed sample size to subsample from each study.
 #'   Defaults to \code{NULL}, in which case the original study sizes are used.
 #' @param n_studies integer giving the number of studies to randomly sample before permutation.
 #'   Defaults to \code{NULL}, in which case all studies are retained.
 #'
 #' @return A named list with elements yone, yzero, sone, szero, studyone, studyzero.
-generate_permuted_dataset <- function(df, gene_names, seed, n_within_study = NULL, n_studies = NULL) {
+generate_permuted_dataset <- function(df,
+                                      gene_names,
+                                      seed,
+                                      n_within_study = NULL,
+                                      n_studies = NULL) {
   library(tidyverse)
   
   set.seed(seed)
-
+  
   # optional subsampling of studies
   if (!is.null(n_studies)) {
     all_studies    <- unique(df$study_accession)
     sampled_studies <- sample(all_studies, size = min(n_studies, length(all_studies)))
     df <- df %>% filter(study_accession %in% sampled_studies)
   }
-
+  
   # optional subsampling of participants within each study
   if (!is.null(n_within_study)) {
     # subsample within each study
     keep_ids <- df %>%
       distinct(study_accession, participant_id) %>%
       group_by(study_accession) %>%
-      group_modify(~ .x %>% slice_sample(n = min(n_within_study, nrow(.x)))) %>%
+      group_modify( ~ .x %>% slice_sample(n = min(n_within_study, nrow(.x)))) %>%
       ungroup() %>%
       pull(participant_id)
     
