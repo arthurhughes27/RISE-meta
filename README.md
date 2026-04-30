@@ -14,6 +14,9 @@ source("analysis/create_project_structure.R")
 3. Download the raw data (described below) and place it in `data-raw/`.
 4. Install dependencies and recreate software environment
 ```r
+if (!requireNamespace(renv, quietly = TRUE)) {
+    install.packages(renv)
+  }
 renv::restore()
 ```
 5. Run the full analysis pipeline:
@@ -26,9 +29,12 @@ Note that due to extensive simulations, this may take a long time (see Runtime i
 
 ## Reproducing the software environment
 
-This repository uses [`renv`](https://rstudio.github.io/renv/) for package management. To restore the exact package versions used in this analysis:
+This repository uses [`renv`](https://rstudio.github.io/renv/) for package management. To install this package and restore the exact package versions used in this analysis:
 
 ```r
+if (!requireNamespace(renv, quietly = TRUE)) {
+    install.packages(renv)
+  }
 renv::restore()
 ```
 
@@ -60,7 +66,7 @@ Data is accessed via the **Surrogate** R package which is installed when using `
 
 1. Go to https://immunespace.org
 2. Click **Resources → Immune Signature Projects**
-3. Open **Project 2** (Immune Signatures 2)
+3. Open **Project 2** (Immune Signatures 2) 
 4. Click **Proceed to study data** (account required)
 5. Open **Clinical and Assay Data**
 
@@ -81,8 +87,11 @@ Export each as:
 
 Expected filenames:
 
-- `neut_ab_titer_2025-01-10_01-13-22.xlsx`
-- `hai_2025-01-10_01-13-41.xlsx`
+- `neut_ab_titer_tag.xlsx`
+- `hai_tag.xlsx`
+
+where `tag` is replaced by a unique tag generated at the time of download. 
+This is dealt with automatically by the scripts when loading in the data. 
 
 ---
 
@@ -144,7 +153,7 @@ Runs:
 - real-data application
 - simulation study 
 
-*NOTE: * due to the extensive number of simulations performed, running the simulation files may take several hours or even days.
+**NOTE:** due to the extensive number of simulations performed, running the simulation files may take a long time.
 See the *Runtime information* section below for details and suggestions. 
 
 ---
@@ -228,7 +237,7 @@ Saved in:
 
 ## Runtime information
 
-The full analysis pipeline takes roughly 1 day on a standard laptop, e.g. one with specs similar to:
+The full analysis pipeline took roughly 1 day on a standard laptop with the following specs.
 
 - Dell Inc. Precision 5470 
 - 12th Gen Intel® Core™ i7-12700H processor × 20 cores
@@ -248,14 +257,39 @@ In RStudio, on default key bindings this can be achieved by
 - typing e.g. `J = 10000` and clicking "Replace All"
 - Running the master script
 
+Note that computational time may be significantly longer for Windows users due to incompatibility of this OS with our parallel computing setup (see below).
+
 ---
 
 ## Parallelisation
 
-Parallel computing has been used to render some parts of the analysis quicker. 
-By default, we detect the number of cores on the user's hardware using `parallel::detectCores()` use half of the available cores. 
-To increase or decrease this (e.g. if your RStudio crashes when trying to run the analysis), simply replace the line 
-`n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2` with e.g. `n.cores = 1` using the Find in Files approach described above. 
+Parallel computing has been used to speed up parts of the analysis.
+By default, the number of cores is detected automatically using
+`parallel::detectCores()` and half of the available cores are used.
+
+### Adjusting the number of cores
+
+To increase or decrease the number of cores used (e.g. if RStudio crashes
+or becomes unresponsive), replace the line:
+
+```r
+n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2
+```
+
+with a fixed number, e.g.:
+
+```r
+n.cores = 1
+```
+
+using the Find in Files approach described in the Runtime section above.
+
+### Operating system caveats
+
+The parallelisation in this repository uses `pbmcapply`, which is based on
+forking via `parallel::mclapply`. **This is only supported on Unix-based
+systems (Linux and macOS).** Windows is not supported, and the code will fall back to sequential computation (i.e. `n.cores = 1`), 
+so the runtime may be significantly slower for windows users. 
 
 ---
 
@@ -268,8 +302,6 @@ sessionInfo()
 ```
 
 after loading all the libraries necessary for this repository. 
-
-## Software and version information
 
 - **OS:** Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu)
 - **R version:** 4.5.3 (2026-03-11)

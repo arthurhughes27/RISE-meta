@@ -372,7 +372,10 @@ Markers</em>, available soon on arXiv.</p>
 <code>data-raw/</code>.</li>
 <li>Install dependencies and recreate software environment</li>
 </ol>
-<pre class="r"><code>renv::restore()</code></pre>
+<pre class="r"><code>if (!requireNamespace(renv, quietly = TRUE)) {
+    install.packages(renv)
+  }
+renv::restore()</code></pre>
 <ol start="5" style="list-style-type: decimal">
 <li>Run the full analysis pipeline:</li>
 </ol>
@@ -433,9 +436,12 @@ antibody titer - Hemagglutination inhibition (HAI)</p>
 </ol>
 <p>Expected filenames:</p>
 <ul>
-<li><code>neut_ab_titer_2025-01-10_01-13-22.xlsx</code></li>
-<li><code>hai_2025-01-10_01-13-41.xlsx</code></li>
+<li><code>neut_ab_titer_tag.xlsx</code></li>
+<li><code>hai_tag.xlsx</code></li>
 </ul>
+<p>where <code>tag</code> is replaced by a unique tag generated at the
+time of download. This is dealt with automatically by the scripts when
+loading in the data.</p>
 <hr />
 </div>
 </div>
@@ -497,9 +503,9 @@ repository)</p></li>
 <li>real-data application</li>
 <li>simulation study</li>
 </ul>
-<p><em>NOTE: </em> due to the extensive number of simulations performed,
-running the simulation files may take several hours or even days. See
-the <em>Runtime information</em> section below for details and
+<p><strong>NOTE:</strong> due to the extensive number of simulations
+performed, running the simulation files may take a long time. See the
+<em>Runtime information</em> section below for details and
 suggestions.</p>
 <hr />
 </div>
@@ -570,8 +576,8 @@ Figure 2)</li>
 </div>
 <div id="runtime-information" class="section level2">
 <h2>Runtime information</h2>
-<p>The full analysis pipeline takes roughly 1 day on a standard laptop,
-e.g. one with specs similar to:</p>
+<p>The full analysis pipeline took roughly 1 day on a standard laptop
+with the following specs.</p>
 <ul>
 <li>Dell Inc. Precision 5470</li>
 <li>12th Gen Intel® Core™ i7-12700H processor × 20 cores</li>
@@ -593,28 +599,43 @@ on default key bindings this can be achieved by</p>
 <li>typing e.g. <code>J = 10000</code> and clicking “Replace All”</li>
 <li>Running the master script</li>
 </ul>
+<p>Note that computational time may be significantly longer for Windows
+users due to incompatibility of this OS with our parallel computing
+setup (see below).</p>
 <hr />
 </div>
 <div id="parallelisation" class="section level2">
 <h2>Parallelisation</h2>
-<p>Parallel computing has been used to render some parts of the analysis
-quicker. By default, we detect the number of cores on the user’s
-hardware using <code>parallel::detectCores()</code> use half of the
-available cores. To increase or decrease this (e.g. if your RStudio
-crashes when trying to run the analysis), simply replace the line
-<code>n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE)/2</code>
-with e.g. <code>n.cores = 1</code> using the Find in Files approach
-described above.</p>
+<p>Parallel computing has been used to speed up parts of the analysis.
+By default, the number of cores is detected automatically using
+<code>parallel::detectCores()</code> and half of the available cores are
+used.</p>
+<div id="adjusting-the-number-of-cores" class="section level3">
+<h3>Adjusting the number of cores</h3>
+<p>To increase or decrease the number of cores used (e.g. if RStudio
+crashes or becomes unresponsive), replace the line:</p>
+<pre class="r"><code>n.cores = parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2</code></pre>
+<p>with a fixed number, e.g.:</p>
+<pre class="r"><code>n.cores = 1</code></pre>
+<p>using the Find in Files approach described in the Runtime section
+above.</p>
+</div>
+<div id="operating-system-caveats" class="section level3">
+<h3>Operating system caveats</h3>
+<p>The parallelisation in this repository uses <code>pbmcapply</code>,
+which is based on forking via <code>parallel::mclapply</code>.
+<strong>This is only supported on Unix-based systems (Linux and
+macOS).</strong> Windows is not supported, and the code will fall back
+to sequential computation (i.e. <code>n.cores = 1</code>), so the
+runtime may be significantly slower for windows users.</p>
 <hr />
+</div>
 </div>
 <div id="software-and-version-information" class="section level2">
 <h2>Software and version information</h2>
 <p>Below is a summary of the output of</p>
 <p><code>{r} sessionInfo()</code></p>
 <p>after loading all the libraries necessary for this repository.</p>
-</div>
-<div id="software-and-version-information-1" class="section level2">
-<h2>Software and version information</h2>
 <ul>
 <li><strong>OS:</strong> Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu)</li>
 <li><strong>R version:</strong> 4.5.3 (2026-03-11)</li>
