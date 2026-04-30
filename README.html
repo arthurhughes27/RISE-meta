@@ -607,6 +607,17 @@ on default key bindings this can be achieved by</p>
 <li>typing e.g. <code>J = 10000</code> and clicking “Replace All”</li>
 <li>Running the master script</li>
 </ul>
+<p>Otherwise, one may exclude the simulation files producing results for
+the Supplementary Information to speed up the computational time. This
+involves</p>
+<ul>
+<li>opening the file
+<code>analysis/simulation/simulation_master.R</code></li>
+<li>commenting out with <code>#</code> the lines following
+<code># Supporting information</code></li>
+<li>running <code>analysis/analysis_master.R</code></li>
+</ul>
+<p>This pipeline can be run in a few hours on a standard PC.</p>
 <p>Note that computational time may be significantly longer for Windows
 users due to incompatibility of this OS with our parallel computing
 setup (see <a href="#parallelisation">Parallelisation</a>).</p>
@@ -680,10 +691,9 @@ environment.</p>
 </div>
 <div id="citation" class="section level2">
 <h2>Citation</h2>
-<p>The methodology is described in:</p>
-<p><em>Meta-Analysis of High-Dimensional Surrogate Markers</em></p>
-<p>and implemented in the R package SurrogateRank.</p>
-<p>(arXiv preprint coming soon)</p>
+<p>The methodology is described in: <em>Meta-Analysis of
+High-Dimensional Surrogate Markers</em> and implemented in the R package
+<code>SurrogateRank</code>, available on the CRAN.</p>
 </div>
 </div>
 

@@ -263,6 +263,14 @@ In RStudio, on default key bindings this can be achieved by
 - typing e.g. `J = 10000` and clicking "Replace All"
 - Running the master script
 
+Otherwise, one may exclude the simulation files producing results for the Supplementary Information to speed up the computational time. This involves
+
+- opening the file `analysis/simulation/simulation_master.R` 
+- commenting out with `#` the lines following `# Supporting information`
+- running `analysis/analysis_master.R`
+
+This pipeline can be run in a few hours on a standard PC. 
+
 Note that computational time may be significantly longer for Windows users due to incompatibility of this OS with our parallel computing setup (see [Parallelisation](#parallelisation)).
 
 ---
